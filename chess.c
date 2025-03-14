@@ -25,7 +25,7 @@ void printTabla(char tabla[8][8]) {
     printf("   a b c d e f g h\n");
 }
 
-int MiscarePion(int x1, int y1, int x2, int y2, char tabla[8][8]){
+int Pion(int x1, int y1, int x2, int y2, char tabla[8][8]){
     if(tabla[x1][y1]=='P' && x2<8 && x2>=0 && y2<8 && y2>=0){
         if (y1 == y2 && x2 == x1 - 1 && tabla[x2][y2] == ' ') return 1;
         if (y1 == y2 && x1 == 6 && x2 == 4 && tabla[5][y1] == ' ' && tabla[4][y1] == ' ') return 1;
@@ -38,7 +38,7 @@ int MiscarePion(int x1, int y1, int x2, int y2, char tabla[8][8]){
     return 0;
 }
 
-int MiscareCal(int x1, int y1, int x2, int y2, char tabla[8][8]) {
+int Cal(int x1, int y1, int x2, int y2, char tabla[8][8]) {
     if (tabla[x1][y1] == 'C' && x2 < 8 && x2 >= 0 && y2 < 8 && y2 >= 0) {
         if ((abs(x1 - x2) == 2 && abs(y1 - y2) == 1) || (abs(x1 - x2) == 1 && abs(y1 - y2) == 2)) {
             if (tabla[x2][y2] == ' ' || (tabla[x2][y2] >= 'a' && tabla[x2][y2] <= 'z')) {
@@ -50,7 +50,7 @@ int MiscareCal(int x1, int y1, int x2, int y2, char tabla[8][8]) {
 }
 
 
-int MiscareNebun(int x1, int y1, int x2, int y2, char tabla[8][8]){
+int Nebun(int x1, int y1, int x2, int y2, char tabla[8][8]){
     if(tabla[x1][y1]=='N' && x2<8 && x2>=0 && y2<8 && y2>=0 && abs(x1 - x2) == abs(y1 - y2)) {
         int dx = (x2 > x1) ? 1 : -1;
         int dy = (y2 > y1) ? 1 : -1;
@@ -65,7 +65,7 @@ int MiscareNebun(int x1, int y1, int x2, int y2, char tabla[8][8]){
     return 0;
 }
 
-int MiscareTurn(int x1, int y1, int x2, int y2, char tabla[8][8]){
+int Turn(int x1, int y1, int x2, int y2, char tabla[8][8]){
     if (tabla[x1][y1] == 'T') {
         if (x1 == x2) {
             int dy = (y2 > y1) ? 1 : -1;
@@ -83,14 +83,14 @@ int MiscareTurn(int x1, int y1, int x2, int y2, char tabla[8][8]){
     return 0;
 }
 
-int MiscareDama(int x1, int y1, int x2, int y2, char tabla[8][8]) {
+int Dama(int x1, int y1, int x2, int y2, char tabla[8][8]) {
     if (tabla[x1][y1] == 'D' && x2<8 && x2>=0 && y2<8 && y2>=0) {
         return MiscareTurn(x1, y1, x2, y2, tabla) || MiscareNebun(x1, y1, x2, y2, tabla);
     }
     return 0;
 }
 
-int MiscareRege(int x1, int y1, int x2, int y2, char tabla[8][8]){
+int Rege(int x1, int y1, int x2, int y2, char tabla[8][8]){
     if(tabla[x1][y1] == 'R' && x2<8 && x2>=0 && y2<8 && y2>=0){
         if((x1 == x2) && (y2 == y1 + 1)) return 1;
         if((x1 == x2) && (y2 == y1 - 1)) return 1;
@@ -107,12 +107,12 @@ int MiscareRege(int x1, int y1, int x2, int y2, char tabla[8][8]){
 int validareMiscare(int x1, int y1, int x2, int y2, char tabla[8][8]) {
     char piesa = tabla[x1][y1];
     switch (piesa) {
-        case 'P': case 'p': return MiscarePion(x1, y1, x2, y2, tabla);
-        case 'C': case 'c': return MiscareCal(x1, y1, x2, y2, tabla);
-        case 'N': case 'n': return MiscareNebun(x1, y1, x2, y2, tabla);
-        case 'T': case 't': return MiscareTurn(x1, y1, x2, y2, tabla);
-        case 'D': case 'd': return MiscareDama(x1, y1, x2, y2, tabla);
-        case 'R': case 'r': return MiscareRege(x1, y1, x2, y2, tabla);
+        case 'P': case 'p': return Pion(x1, y1, x2, y2, tabla);
+        case 'C': case 'c': return Cal(x1, y1, x2, y2, tabla);
+        case 'N': case 'n': return Nebun(x1, y1, x2, y2, tabla);
+        case 'T': case 't': return Turn(x1, y1, x2, y2, tabla);
+        case 'D': case 'd': return Dama(x1, y1, x2, y2, tabla);
+        case 'R': case 'r': return Rege(x1, y1, x2, y2, tabla);
         default: return 0;
     }
 }
