@@ -84,8 +84,33 @@ int Turn(int x1, int y1, int x2, int y2, char tabla[8][8]){
 }
 
 int Dama(int x1, int y1, int x2, int y2, char tabla[8][8]) {
+
+    int dx = (x2 > x1) ? 1 : -1;
+    int dy = (y2 > y1) ? 1 : -1;
+    int i, j;
+
     if (tabla[x1][y1] == 'D' && x2<8 && x2>=0 && y2<8 && y2>=0) {
-        return Turn(x1, y1, x2, y2, tabla) || Nebun(x1, y1, x2, y2, tabla);
+        if (x1 == x2) {
+            for (j = y1 + dy; j != y2; j += dy)
+                if (tabla[x1][j] != ' ') return 0;
+        } 
+        else if (y1 == y2) {
+            for (i = x1 + dx; i != x2; i += dx)
+                if (tabla[i][y1] != ' ') return 0;
+        } 
+        else return 0;
+        return (tabla[x2][y2] == ' ' || (tabla[x2][y2] >= 'a' && tabla[x2][y2] <= 'z'));
+
+        if(abs(x1 - x2) == abs(y1 - y2)){
+            i = x1 + dx;
+            j = y1 + dy;
+            while (i != x2 && j != y2) {
+                if (tabla[i][j] != ' ') return 0;
+                i += dx;
+                j += dy;
+            }
+            return (tabla[x2][y2] == ' ' || (tabla[x2][y2] >= 'a' && tabla[x2][y2] <= 'z'));
+        }
     }
     return 0;
 }
