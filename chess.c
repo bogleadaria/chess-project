@@ -85,7 +85,7 @@ int Turn(int x1, int y1, int x2, int y2, char tabla[8][8]){
 
 int Dama(int x1, int y1, int x2, int y2, char tabla[8][8]) {
     if (tabla[x1][y1] == 'D' && x2<8 && x2>=0 && y2<8 && y2>=0) {
-        return MiscareTurn(x1, y1, x2, y2, tabla) || MiscareNebun(x1, y1, x2, y2, tabla);
+        return Turn(x1, y1, x2, y2, tabla) || Nebun(x1, y1, x2, y2, tabla);
     }
     return 0;
 }
