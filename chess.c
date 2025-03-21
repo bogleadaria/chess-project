@@ -7,7 +7,7 @@
 // C / c = Cal alb / negru
 // N / n = Nebun alb / negru
 // T / t = Turn alb / negru
-// D / d = Regină albă / neagră
+// D / d = Regină (damă) albă / neagră
 // R / r= Rege alb / negru
 // ' ' = Celulă goală
 
