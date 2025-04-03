@@ -1,0 +1,15 @@
+project/
+├── main.c               # Funcția principală
+├── game.c               # Funcții legate de starea jocului (tabla, afișare etc.)
+├── game.h               # Header pentru game.c
+├── move_validation.c    # Validare mutări pentru toate piesele
+├── move_validation.h    # Header pentru move_validation.c
+├── pieces/
+│   ├── pawn.c           # Funcții pentru mutările pionului
+│   ├── knight.c         # Funcții pentru mutările calului
+│   ├── bishop.c         # Funcții pentru mutările nebunului
+│   ├── rook.c           # Funcții pentru mutările turnului
+│   ├── queen.c          # Funcții pentru mutările damei
+│   ├── king.c           # Funcții pentru mutările regelui
+│   └── pieces.h         # Header comun pentru toate piesele
+└── Makefile             # Pentru compilare automată
