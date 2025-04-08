@@ -1,3 +1,6 @@
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "pieces.h"
 
 int Cal(int x1, int y1, int x2, int y2, GameState *gs)
