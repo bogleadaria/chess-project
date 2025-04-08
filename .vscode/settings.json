@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "move_validation.h": "c",
+        "game.h": "c"
+    }
+}
