@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "raylib.h"
+
 #include "game.h"
 #include "move_validation.h"
 
