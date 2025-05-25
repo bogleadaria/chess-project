@@ -12,22 +12,26 @@ int existaMutareLegala(GameState *gs) {
     for (int x1 = 0; x1 < 8; x1++)
         for (int y1 = 0; y1 < 8; y1++)
             if ((gs->currentPlayer == 0 && isupper(gs->tabla[x1][y1])) ||
-                (gs->currentPlayer == 1 && islower(gs->tabla[x1][y1])))
+                (gs->currentPlayer == 1 && islower(gs->tabla[x1][y1]))){
+                    printf("\ncevaaaaaa-----\n");
                 for (int x2 = 0; x2 < 8; x2++)
-                    for (int y2 = 0; y2 < 8; y2++)
+                    for (int y2 = 0; y2 < 8; y2++){
+                        printf("\n %d\n%d\n%d\n%d\n%d\n", gs->currentPlayer, x1,y1,x2,y2);
                         if (validareMiscare(x1, y1, x2, y2, gs) == 1)
                             return 1;
+                }
+            }
     return 0;
 }
 
 int main() {
 
-    printf("TEST\n"); fflush(stdout);
+    //printf("TEST\n"); fflush(stdout);
 
     GameState gs = initializeGame();
 
-    printf("currentPlayer la start: %d\n", gs.currentPlayer); fflush(stdout);
-    printf("Piesa la e2: %c\n", gs.tabla[6][4]); fflush(stdout);
+    //printf("currentPlayer la start: %d\n", gs.currentPlayer); fflush(stdout);
+    //printf("Piesa la e2: %c\n", gs.tabla[6][4]); fflush(stdout);
 
 
     char start[3], finish[3];
@@ -42,6 +46,7 @@ int main() {
         // Rândul AI-ului (negru)
         if (gs.currentPlayer == 1) {
             printf("Engine-ul gândește...\n");
+            printf("\n\n%d\n\n", gs.currentPlayer);
             Move best = findBestMove(&gs);
             if (best.x1 == -1) {
                 printf("Nicio mutare validă! Remiză sau mat.\n");
