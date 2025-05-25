@@ -257,29 +257,25 @@ int reincepereJoc(GameState *gs, const char *filename) {
 
     for (int j = 0; j < strlen(buffer); j++) {
         if(isdigit(buffer[j]) && isSpace==0){
-            printf("Spații: %c\n", buffer[j]);
             int spaceCount = buffer[j] - '0';
-            printf("col: %d, rand: %d, spații: %d\n", col, rand, spaceCount);
             for (int cc = 0; cc < spaceCount; cc++) {
                 gs->tabla[rand][col++] = ' ';
             }
-            printTabla(gs->tabla);
         } else if(isalpha(buffer[j]) && isSpace == 0){
-            printf("Piesa: %c\n", buffer[j]);
             gs->tabla[rand][col++] = buffer[j];
-            printTabla(gs->tabla);
         } else if(buffer[j] == '/') {
             rand++;
             col = 0;
-            printTabla(gs->tabla);
         } else if (buffer[j] == ' ' && isalpha(buffer[j+1])) {
             isSpace++;
             if(isSpace == 1){
                 switch (buffer[j+1]) {
                     case 'A': 
-                        printf("Jucătorul curent este Alb\n"); gs->currentPlayer = 0; break;
-                    case 'N': 
-                        printf("Jucătorul curent este Negru\n"); gs->currentPlayer = 1; break;
+                        // Alb este jucătorul curent
+                        gs->currentPlayer = 0; break;
+                    case 'N':
+                        // Negru este jucătorul curent  
+                        gs->currentPlayer = 1; break;
                     default: 
                         break;
                 }
@@ -350,8 +346,6 @@ int reincepereJoc(GameState *gs, const char *filename) {
             continue;
         }
     }
-
-    printTabla(gs->tabla);
 
     fclose(file);
     printf("Joc încărcat cu succes din '%s'!\n", filename);
