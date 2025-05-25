@@ -19,7 +19,7 @@ void genereazaMutariTurn(int x, int y, GameState *gs, MoveList *lista);
 void genereazaMutariRege(int x, int y, GameState *gs, MoveList *lista);
 
 void genereazaMutariPion(int x, int y, GameState *gs, MoveList *lista);
-void genereazaToateMutarilePion(GameState *gs, MoveList *lista);
+void genereazaToateMutarilePion(GameState *gs, MoveList *lista, int player);
 
 void genereazaMutariNebun(int x, int y, GameState *gs, MoveList *lista);
 void genereazaToateMutarileNebun(GameState *gs, MoveList *lista, int player);

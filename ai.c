@@ -187,7 +187,7 @@ Move findBestMove(GameState *gs) {
     // Generare mutări pentru engine
     for(int x1=0; x1<8; x1++) {
         for(int y1=0; y1<8; y1++) {
-            if(isupper(gs->tabla[x1][y1])) {
+            if(islower(gs->tabla[x1][y1])) {
                 for(int x2=0; x2<8; x2++) {
                     for(int y2=0; y2<8; y2++) {
                         if(validareMiscare(x1,y1,x2,y2,gs)) {

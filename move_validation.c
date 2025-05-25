@@ -47,26 +47,26 @@ int validareMiscare(int x1, int y1, int x2, int y2, GameState *gs)
 
 int validareRocada(int x1, int y1, int x2, int y2, GameState *gs)
 {
-    int kingside = (y2 > y1);
-    int rook_y = kingside ? 7 : 0;
+    int regeside = (y2 > y1);
+    int turn_y = regeside ? 7 : 0;
 
     // Verifică drepturile de rocadă
-    if ((gs->currentPlayer == 0 && !(kingside ? gs->canWhiteCastleKingside : gs->canWhiteCastleQueenside)) ||
-        (gs->currentPlayer == 1 && !(kingside ? gs->canBlackCastleKingside : gs->canBlackCastleQueenside)))
+    if ((gs->currentPlayer == 0 && !(regeside ? gs->canWhiteCastleKingside : gs->canWhiteCastleQueenside)) ||
+        (gs->currentPlayer == 1 && !(regeside ? gs->canBlackCastleKingside : gs->canBlackCastleQueenside)))
         return 0;
 
     // Verifică spațiile libere și atacate
-    for (int y = y1 + (kingside ? 1 : -1); y != rook_y; y += (kingside ? 1 : -1))
+    for (int y = y1 + (regeside ? 1 : -1); y != turn_y; y += (regeside ? 1 : -1))
     {
         if (gs->tabla[x1][y] != ' ' || isSquareAttacked(gs, x1, y, !gs->currentPlayer))
             return 0;
     }
 
     // Actualizează pozițiile
-    gs->tabla[x1][kingside ? y1 + 2 : y1 - 2] = gs->tabla[x1][y1];
-    gs->tabla[x1][kingside ? y1 + 1 : y1 - 1] = gs->tabla[x1][rook_y];
+    gs->tabla[x1][regeside ? y1 + 2 : y1 - 2] = gs->tabla[x1][y1];
+    gs->tabla[x1][regeside ? y1 + 1 : y1 - 1] = gs->tabla[x1][turn_y];
     gs->tabla[x1][y1] = ' ';
-    gs->tabla[x1][rook_y] = ' ';
+    gs->tabla[x1][turn_y] = ' ';
 
     return 1;
 }
@@ -75,16 +75,16 @@ void executa_mutare(int x1, int y1, int x2, int y2, GameState *gs)
 {
     // Memorare informații pentru en passant și rocadă
     char piece = gs->tabla[x1][y1];
-    int isPawnMove = (toupper(piece) == 'P');
-    int isKingMove = (toupper(piece) == 'R');
-    int isRookMove = (toupper(piece) == 'T');
+    int isPionMove = (toupper(piece) == 'P');
+    int isRegeMove = (toupper(piece) == 'R');
+    int isTurnMove = (toupper(piece) == 'T');
     int isCapture = (gs->tabla[x2][y2] != ' ');
 
     // Actualizează en passant target
-    if (isPawnMove && abs(x2 - x1) == 2)
+    if (isPionMove && abs(x2 - x1) == 2)
     {
         gs->enPassantTarget[0] = (x1 + x2) / 2;
-        gs->enPassantTarget[1] = y1;
+        gs->enPassantTarget[1] = y2;
     }
     else
     {
@@ -93,13 +93,13 @@ void executa_mutare(int x1, int y1, int x2, int y2, GameState *gs)
     }
 
     // Gestionează captura en passant
-    if (isPawnMove && y2 != y1 && gs->tabla[x2][y2] == ' ')
+    if (isPionMove && y2 != y1 && gs->tabla[x2][y2] == ' ')
     {
         gs->tabla[x1][y2] = ' '; // Șterge pionul capturat
     }
 
     // Actualizează drepturile de rocadă
-    if (isKingMove)
+    if (isRegeMove)
     {
         if (piece == 'R')
         {
@@ -112,7 +112,7 @@ void executa_mutare(int x1, int y1, int x2, int y2, GameState *gs)
             gs->canBlackCastleQueenside = 0;
         }
     }
-    else if (isRookMove)
+    else if (isTurnMove)
     {
         if (piece == 'T')
         {
@@ -131,16 +131,16 @@ void executa_mutare(int x1, int y1, int x2, int y2, GameState *gs)
     }
 
     // Gestionează rocada
-    if (isKingMove && abs(y2 - y1) == 2)
+    if (isRegeMove && abs(y2 - y1) == 2)
     {
-        int rook_y = (y2 > y1) ? 7 : 0;
-        int new_rook_y = (y2 > y1) ? y2 - 1 : y2 + 1;
-        gs->tabla[x1][new_rook_y] = gs->tabla[x1][rook_y];
-        gs->tabla[x1][rook_y] = ' ';
+        int turn_y = (y2 > y1) ? 7 : 0;
+        int new_turn_y = (y2 > y1) ? y2 - 1 : y2 + 1;
+        gs->tabla[x1][new_turn_y] = gs->tabla[x1][turn_y];
+        gs->tabla[x1][turn_y] = ' ';
     }
 
     // Actualizează contoarele de mutări
-    if (isPawnMove || isCapture)
+    if (isPionMove || isCapture)
     {
         gs->halfmoveClock = 0;
     }
@@ -159,7 +159,7 @@ void executa_mutare(int x1, int y1, int x2, int y2, GameState *gs)
     gs->tabla[x1][y1] = ' ';
 
     // Gestionează promovarea pionului
-    if (isPawnMove && ((x2 == 0 && piece == 'P') || (x2 == 7 && piece == 'p')))
+    if (isPionMove && ((x2 == 0 && piece == 'P') || (x2 == 7 && piece == 'p')))
     {
         char promo;
         printf("Promovare pion! Alege (D, C, T, N): ");
