@@ -8,7 +8,10 @@ int main() {
     GameState gs = initializeGame();
     char start[3], finish[3];
     int x1, y1, x2, y2;
-
+    //// Graphical interface
+    visual();
+    //// Text based interface
+    /*
     while (1) {
         // Afișează tabla de șah
         printTabla(gs.tabla);
@@ -46,7 +49,7 @@ int main() {
         } else {
             printf("Mutare invalidă!\n");
         }
-    }
+    }*/
 
     return 0;
 }
