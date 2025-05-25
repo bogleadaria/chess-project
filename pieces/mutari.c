@@ -14,8 +14,8 @@ void genereazaMutariTurn(int x, int y, GameState *gs, MoveList *lista) {
     if (piece != 'T' && piece != 't')
         return;
 
-    int dx[] = {1, -1, 0, 0};
-    int dy[] = {0, 0, 1, -1};
+    int dx[] = {1, -1, 0, 0}; 
+    int dy[] = {0, 0, 1, -1}; 
     int isAlb = (piece == 'T');
 
     for (int dir = 0; dir < 4; dir++) {
@@ -117,8 +117,8 @@ void genereazaMutariNebun(int x, int y, GameState *gs, MoveList *lista) {
 
     int isAlb = (piece == 'N');
     // Direcțiile pentru nebun: (dx, dy)
-    int dx[] = {1, 1, -1, -1};
-    int dy[] = {1, -1, 1, -1};
+    int dx[] = {1, 1, -1, -1}; 
+    int dy[] = {1, -1, 1, -1}; 
 
     for (int dir = 0; dir < 4; dir++) {
         int nx = x + dx[dir], ny = y + dy[dir];

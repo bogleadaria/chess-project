@@ -190,9 +190,7 @@ Move findBestMove(GameState *gs) {
             if(islower(gs->tabla[x1][y1])) {
                 for(int x2=0; x2<8; x2++) {
                     for(int y2=0; y2<8; y2++) {
-                        // printf("incerc mutarea %d%d - %d%d...\n", x1, y1, x2, y2);
                         if(validareMiscare(x1,y1,x2,y2,gs)) {
-                            //printf("buna mutarea %d%d - %d%d\t!!\n", x1, y1, x2, y2);
                             moves[moveCount++] = (Move){x1,y1,x2,y2,0};
                         }
                     }
