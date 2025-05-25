@@ -10,7 +10,7 @@ void transformareMiscare(char *start, char *finish, int *x1, int *y1, int *x2, i
 {
     *y1 = tolower(start[0]) - 'a';
     *x1 = 8 - (start[1] - '0');
-    *y2 = tolower(finish[0] - 'a');
+    *y2 = tolower(finish[0]) - 'a';
     *x2 = 8 - (finish[1] - '0');
 }
 
@@ -21,11 +21,10 @@ int validareMiscare(int x1, int y1, int x2, int y2, GameState *gs)
     // Verifică dacă piesa aparține jucătorului curent
     if (piece == ' ' ||
         (gs->currentPlayer == 0 && islower(piece)) ||
-        (gs->currentPlayer == 1 && isupper(piece)))
-    {
-        printf("Jucător gresit!\n");
-        return 0; // Piesa nu aparține jucătorului curent
-    }
+        (gs->currentPlayer == 1 && isupper(piece))) {
+        //printf("Jucător gresit!\n");
+        return 0;
+    }    
 
     switch (toupper(piece))
     {
