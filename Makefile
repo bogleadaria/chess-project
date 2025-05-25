@@ -1,4 +1,4 @@
 all:
-	gcc -Wall -lSDL2 -I. -Ipieces main.c game.c move_validation.c pieces/*.c -o chess_game && ./chess_game
+	gcc -Wall -lSDL2 -I. -Ipieces main.c game.c move_validation.c ai.c pieces/*.c -o chess_game && ./chess_game
 clear:
 	rm -f chess_game
