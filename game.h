@@ -26,4 +26,4 @@ void salveazaJoc(const GameState *gs, const char *filename);
 void inchideJoc();
 int reincepereJoc(GameState *gs, const char *filename);
 
-#endif // GAME_H
+#endif
