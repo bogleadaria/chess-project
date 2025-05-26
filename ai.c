@@ -3,91 +3,120 @@
 #include <limits.h>
 #include <ctype.h>
 #include <math.h>
+#include <string.h>
 
 #include "ai.h"
 #include "move_validation.h"
+#include "mutari.h"
 
-// Tabele poziționale pentru alb
-const int tabla_pion[64] = {
-    0,   0,   0,   0,   0,   0,   0,   0,
-    5,  10,  10, -20, -20,  10,  10,   5,
-    5,  -5, -10,   0,   0, -10,  -5,   5,
-    0,   0,   0,  20,  20,   0,   0,   0,
-    5,   5,  10,  25,  25,  10,   5,   5,
-   10,  10,  20,  30,  30,  20,  10,  10,
-   50,  50,  50,  50,  50,  50,  50,  50,
-    0,   0,   0,   0,   0,   0,   0,   0
-};
-
-const int tabla_cal[64] = {
-    -50, -40, -30, -30, -30, -30, -40, -50,
-    -40, -20,   0,   0,   0,   0, -20, -40,
-    -30,   0,  10,  15,  15,  10,   0, -30,
-    -30,   5,  15,  20,  20,  15,   5, -30,
-    -30,   0,  15,  20,  20,  15,   0, -30,
-    -30,   5,  10,  15,  15,  10,   5, -30,
-    -40, -20,   0,   5,   5,   0, -20, -40,
-    -50, -40, -30, -30, -30, -30, -40, -50
- };
-
- 
- const int tabla_nebun[64] = {
-    -20, -10, -10, -10, -10, -10, -10, -20,
-    -10,   0,   0,   0,   0,   0,   0, -10,
-    -10,   0,   5,  10,  10,   5,   0, -10,
-    -10,   5,   5,  10,  10,   5,   5, -10,
-    -10,   0,  10,  10,  10,  10,   0, -10,
-    -10,  10,  10,  10,  10,  10,  10, -10,
-    -10,   5,   0,   0,   0,   0,   5, -10,
-    -20, -10, -10, -10, -10, -10, -10, -20
+// Tabele poziționale pentru piese albe
+float tabla_pion_a[64] = {
+    0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+    0.5,  1.0,  1.0, -2.0, -2.0,  1.0,  1.0,  0.5,
+    0.5, -0.5, -1.0,  0.0,  0.0, -1.0, -0.5,  0.5,
+    0.0,  0.0,  0.0,  2.0,  2.0,  0.0,  0.0,  0.0,
+    0.5,  0.5,  1.0,  2.5,  2.5,  1.0,  0.5,  0.5,
+    1.0,  1.0,  2.0,  3.0,  3.0,  2.0,  1.0,  1.0,
+    5.0,  5.0,  5.0,  5.0,  5.0,  5.0,  5.0,  5.0,
+    0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0
  };
  
- const int tabla_turn[64] = {
-    0,   0,   0,   0,   0,   0,   0,   0,
-    5,  10,  10,  10,  10,  10,  10,   5,
-   -5,   0,   0,   0,   0,   0,   0,  -5,
-   -5,   0,   0,   0,   0,   0,   0,  -5,
-   -5,   0,   0,   0,   0,   0,   0,  -5,
-   -5,   0,   0,   0,   0,   0,   0,  -5,
-   -5,   0,   0,   0,   0,   0,   0,  -5,
-    0,   0,   0,   5,   5,   0,   0,   0
-};
-
-const int tabla_dama[64] = {
-    -20, -10, -10,  -5,  -5, -10, -10, -20,
-    -10,   0,   0,   0,   0,   0,   0, -10,
-    -10,   0,   5,   5,   5,   5,   0, -10,
-     -5,   0,   5,   5,   5,   5,   0,  -5,
-      0,   0,   5,   5,   5,   5,   0,  -5,
-    -10,   5,   5,   5,   5,   5,   0, -10,
-    -10,   0,   5,   0,   0,   0,   0, -10,
-    -20, -10, -10,  -5,  -5, -10, -10, -20
+ float tabla_cal_a[64] = {
+     -5.0, -4.0, -3.0, -3.0, -3.0, -3.0, -4.0, -5.0,
+     -4.0, -2.0,  0.0,  0.0,  0.0,  0.0, -2.0, -4.0,
+     -3.0,  0.0,  1.0,  1.5,  1.5,  1.0,  0.0, -3.0,
+     -3.0,  0.5,  1.5,  2.0,  2.0,  1.5,  0.5, -3.0,
+     -3.0,  0.0,  1.5,  2.0,  2.0,  1.5,  0.0, -3.0,
+     -3.0,  0.5,  1.0,  1.5,  1.5,  1.0,  0.5, -3.0,
+     -4.0, -2.0,  0.0,  0.5,  0.5,  0.0, -2.0, -4.0,
+     -5.0, -4.0, -3.0, -3.0, -3.0, -3.0, -4.0, -5.0
+  };
+ 
+  float tabla_nebun_a[64] = {
+     -2.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -2.0,
+     -1.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -1.0,
+     -1.0,  0.0,  0.5,  1.0,  1.0,  0.5,  0.0, -1.0,
+     -1.0,  0.5,  0.5,  1.0,  1.0,  0.5,  0.5, -1.0,
+     -1.0,  0.0,  1.0,  1.0,  1.0,  1.0,  0.0, -1.0,
+     -1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0, -1.0,
+     -1.0,  0.5,  0.0,  0.0,  0.0,  0.0,  0.5, -1.0,
+     -2.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -2.0
+  };
+ 
+  float tabla_turn_a[64] = {
+    0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+    0.5,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  0.5,
+   -0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5,
+   -0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5,
+   -0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5,
+   -0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5,
+   -0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5,
+    0.0,  0.0,  0.0,  0.5,  0.5,  0.0,  0.0,  0.0
  };
-
- const int tabla_rege[64] = {
-    -30, -40, -40, -50, -50, -40, -40, -30,
-    -30, -40, -40, -50, -50, -40, -40, -30,
-    -30, -40, -40, -50, -50, -40, -40, -30,
-    -30, -40, -40, -50, -50, -40, -40, -30,
-    -20, -30, -30, -40, -40, -30, -30, -20,
-    -10, -20, -20, -20, -20, -20, -20, -10,
-     20,  20,   0,   0,   0,   0,  20,  20,
-     20,  30,  10,   0,   0,  10,  30,  20
+ 
+ float tabla_dama_a[64] = {
+     -2.0, -1.0, -1.0, -0.5, -0.5, -1.0, -1.0, -2.0,
+     -1.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -1.0,
+     -1.0,  0.0,  0.5,  0.5,  0.5,  0.5,  0.0, -1.0,
+     -0.5,  0.0,  0.5,  0.5,  0.5,  0.5,  0.0, -0.5,
+      0.0,  0.0,  0.5,  0.5,  0.5,  0.5,  0.0, -0.5,
+     -1.0,  0.5,  0.5,  0.5,  0.5,  0.5,  0.0, -1.0,
+     -1.0,  0.0,  0.5,  0.0,  0.0,  0.0,  0.0, -1.0,
+     -2.0, -1.0, -1.0, -0.5, -0.5, -1.0, -1.0, -2.0
  };
-
- const int tabla_rege_final[64] = {
-    -50, -40, -30, -20, -20, -30, -40, -50,
-    -30, -20, -10,   0,   0, -10, -20, -30,
-    -30, -10,  20,  30,  30,  20, -10, -30,
-    -30, -10,  30,  40,  40,  30, -10, -30,
-    -30, -10,  30,  40,  40,  30, -10, -30,
-    -30, -10,  20,  30,  30,  20, -10, -30,
-    -30, -30,   0,   0,   0,   0, -30, -30,
-    -50, -30, -30, -30, -30, -30, -30, -50
+ 
+ float tabla_rege_a[64] = {
+     -3.0, -4.0, -4.0, -5.0, -5.0, -4.0, -4.0, -3.0,
+     -3.0, -4.0, -4.0, -5.0, -5.0, -4.0, -4.0, -3.0,
+     -3.0, -4.0, -4.0, -5.0, -5.0, -4.0, -4.0, -3.0,
+     -3.0, -4.0, -4.0, -5.0, -5.0, -4.0, -4.0, -3.0,
+     -2.0, -3.0, -3.0, -4.0, -4.0, -3.0, -3.0, -2.0,
+     -1.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -1.0,
+      2.0,  2.0,  0.0,  0.0,  0.0,  0.0,  2.0,  2.0,
+      2.0,  3.0,  1.0,  0.0,  0.0,  1.0,  3.0,  2.0
  };
+ 
+ // Tabele poziționale pentru piese negre
+ float tabla_pion_n[64];
+ float tabla_cal_n[64];
+ float tabla_nebun_n[64];
+ float tabla_turn_n[64];
+ float tabla_dama_n[64];
+ float tabla_rege_n[64];
+ 
+ void inverseaza_sir(float *sir) {
+    int i, j;
+    float aux;
+
+    for (i = 0, j = 63; i < j; i++, j--) {
+        aux = sir[i];
+        sir[i] = sir[j];
+        sir[j] = aux;
+    }
+}
+
+void initializeaza_tabele_negre() {
+    memcpy(tabla_pion_n, tabla_pion_a, sizeof(tabla_pion_a));
+    inverseaza_sir(tabla_pion_n);
+
+    memcpy(tabla_cal_n, tabla_cal_a, sizeof(tabla_cal_a));
+    inverseaza_sir(tabla_cal_n);
+
+    memcpy(tabla_nebun_n, tabla_nebun_a, sizeof(tabla_nebun_a));
+    inverseaza_sir(tabla_nebun_n);
+
+    memcpy(tabla_turn_n, tabla_turn_a, sizeof(tabla_turn_a));
+    inverseaza_sir(tabla_turn_n);
+
+    memcpy(tabla_dama_n, tabla_dama_a, sizeof(tabla_dama_a));
+    inverseaza_sir(tabla_dama_n);
+
+    memcpy(tabla_rege_n, tabla_rege_a, sizeof(tabla_rege_a));
+    inverseaza_sir(tabla_rege_n);
+}
 
 float evaluatePosition(GameState *gs) {
-    float score = 0.0f;
+    float scor = 0.0f;
     
     for(int i = 0; i < 8; i++) {
         for(int j = 0; j < 8; j++) {
@@ -95,122 +124,123 @@ float evaluatePosition(GameState *gs) {
             int pos = i*8 + j;
             
             switch(piece) {
-                case 'P': score += 1.0 + tabla_pion[pos]; break;
-                case 'N': score += 3.0 + tabla_cal[pos]; break;
-                case 'B': score += 3.0 + tabla_nebun[pos]; break;
-                case 'R': score += 5.0 + tabla_turn[pos]; break;
-                case 'Q': score += 9.0 + tabla_dama[pos]; break;
-                case 'K': score += 100.0 + tabla_rege[pos]; break;
-                case 'p': score -= 1.0 + tabla_pion[63-pos]; break;
-                case 'n': score -= 3.0 + tabla_cal[63-pos]; break;
-                case 'b': score -= 3.0 + tabla_nebun[63-pos]; break;
-                case 'r': score -= 5.0 + tabla_turn[63-pos]; break;
-                case 'q': score -= 9.0 + tabla_dama[63-pos]; break;
-                case 'k': score -= 100.0 + tabla_rege[63-pos]; break;
+                case 'P': 
+                    scor += 1.0 + tabla_pion_a[pos]; break;
+                case 'C': 
+                    scor += 3.0 + tabla_cal_a[pos]; break;
+                case 'N': 
+                    scor += 3.0 + tabla_nebun_a[pos]; break;
+                case 'T': 
+                    scor += 5.0 + tabla_turn_a[pos]; break;
+                case 'D': 
+                    scor += 9.0 + tabla_dama_a[pos]; break;
+                case 'R': 
+                    scor += 100.0 + tabla_rege_a[pos]; break;
+                case 'p': 
+                    scor -= 1.0 + tabla_pion_n[63-pos]; break;
+                case 'c': 
+                    scor -= 3.0 + tabla_cal_n[63-pos]; break;
+                case 'n': 
+                    scor -= 3.0 + tabla_nebun_n[63-pos]; break;
+                case 't': 
+                    scor -= 5.0 + tabla_turn_n[63-pos]; break;
+                case 'd': 
+                    scor -= 9.0 + tabla_dama_n[63-pos]; break;
+                case 'r': 
+                    scor -= 100.0 + tabla_rege_n[63-pos]; break;
             }
         }
     }
     
     // Bonusuri/penalizări suplimentare
-    if(gs->canWhiteCastleKingside) score += 0.5;
-    if(gs->canBlackCastleKingside) score -= 0.5;
+    if(gs->canWhiteCastleKingside) scor += 0.5;
+    if(gs->canBlackCastleKingside) scor -= 0.5;
     
-    return score;
+    return scor;
 }
 
 float minimax(GameState *gs, int depth, float alpha, float beta, int maximizingPlayer) {
-    if(depth == 0 || isCheckmate(gs))
+    if (depth == 0 || isCheckmate(gs)) {
         return evaluatePosition(gs);
-
-    Move moves[256];
-    int moveCount = 0;
-
-    // Generare mutări
-    for(int x1=0; x1<8; x1++) {
-        for(int y1=0; y1<8; y1++) {
-            if ((maximizingPlayer && islower(gs->tabla[x1][y1])) || 
-    (!maximizingPlayer && isupper(gs->tabla[x1][y1])))
-{
-                for(int x2=0; x2<8; x2++) {
-                    for(int y2=0; y2<8; y2++) {
-                        if(validareMiscare(x1,y1,x2,y2,gs)) {
-                            moves[moveCount++] = (Move){x1,y1,x2,y2,0};
-                        }
-                    }
-                }
-            }
-        }
     }
 
-    if(maximizingPlayer) {
+    MoveList lista;
+    initMoveList(&lista);
+
+    int player = maximizingPlayer ? 0 : 1;
+
+    // Generează toate mutările pentru jucătorul curent
+    genereazaToateMutarilePion(gs, &lista, player);
+    genereazaToateMutarileCal(gs, &lista, player);
+    genereazaToateMutarileNebun(gs, &lista, player);
+    genereazaToateMutarileTurn(gs, &lista, player);
+    genereazaToateMutarileDama(gs, &lista, player);
+    genereazaToateMutarileRege(gs, &lista, player);
+
+    if (lista.count == 0) {
+        return evaluatePosition(gs);
+    }
+
+    if (maximizingPlayer) {
         float maxEval = -INF;
-        for(int i=0; i<moveCount; i++) {
-            GameState newState = *gs;
-            executa_mutare(moves[i].x1, moves[i].y1, moves[i].x2, moves[i].y2, &newState);
-            float eval = minimax(&newState, depth-1, alpha, beta, 0);
-            
-            if(eval > maxEval) {
-                maxEval = eval;
-                if(depth == DEPTH) moves[i].score = eval;
-            }
-            
-            alpha = fmax(alpha, eval);
-            if(beta <= alpha)
-                break;
+        for (int i = 0; i < lista.count; i++) {
+            GameState copie = *gs;
+            Move m = lista.mutari[i];
+            executa_mutare(m.x1, m.y1, m.x2, m.y2, &copie);
+            float eval = minimax(&copie, depth - 1, alpha, beta, 0);
+            if (eval > maxEval) maxEval = eval;
+            if (eval > alpha) alpha = eval;
+            if (beta <= alpha) break;
         }
         return maxEval;
     } else {
         float minEval = INF;
-        for(int i=0; i<moveCount; i++) {
-            GameState newState = *gs;
-            executa_mutare(moves[i].x1, moves[i].y1, moves[i].x2, moves[i].y2, &newState);
-            float eval = minimax(&newState, depth-1, alpha, beta, 1);
-            
-            if(eval < minEval) {
-                minEval = eval;
-                if(depth == DEPTH) moves[i].score = eval;
-            }
-            
-            beta = fmin(beta, eval);
-            if(beta <= alpha)
-                break;
+        for (int i = 0; i < lista.count; i++) { 
+            GameState copie = *gs;
+            Move m = lista.mutari[i];
+            executa_mutare(m.x1, m.y1, m.x2, m.y2, &copie);
+            float eval = minimax(&copie, depth - 1, alpha, beta, 1);
+            if (eval < minEval) minEval = eval;
+            if (eval < beta) beta = eval;
+            if (beta <= alpha) break;
         }
         return minEval;
     }
 }
 
 Move findBestMove(GameState *gs) {
-    Move bestMove = {-1,-1,-1,-1,-INF};
-    Move moves[256];
-    int moveCount = 0;
+    MoveList lista;
+    initMoveList(&lista);
 
-    // Generare mutări pentru engine
-    for(int x1=0; x1<8; x1++) {
-        for(int y1=0; y1<8; y1++) {
-            if(islower(gs->tabla[x1][y1])) {
-                for(int x2=0; x2<8; x2++) {
-                    for(int y2=0; y2<8; y2++) {
-                        if(validareMiscare(x1,y1,x2,y2,gs)) {
-                            moves[moveCount++] = (Move){x1,y1,x2,y2,0};
-                        }
-                    }
-                }
+    int jucator = gs->currentPlayer;
+
+    // Generează toate mutările pentru piesele jucătorului curent
+    genereazaToateMutarilePion(gs, &lista, jucator);
+    genereazaToateMutarileCal(gs, &lista, jucator);
+    genereazaToateMutarileNebun(gs, &lista, jucator);
+    genereazaToateMutarileTurn(gs, &lista, jucator);
+    genereazaToateMutarileDama(gs, &lista, jucator);
+
+    // Pentru rege
+    for (int x = 0; x < 8; x++)
+        for (int y = 0; y < 8; y++) {
+            char piece = gs->tabla[x][y];
+            if ((jucator == 0 && piece == 'R') || (jucator == 1 && piece == 'r')) {
+                genereazaMutariRege(x, y, gs, &lista);
             }
         }
-    }
 
-    // Evaluare fiecare mutare
-    for(int i=0; i<moveCount; i++) {
-        GameState newState = *gs;
-        executa_mutare(moves[i].x1, moves[i].y1, moves[i].x2, moves[i].y2, &newState);
-        float currentEval = minimax(&newState, DEPTH-1, -INF, INF, 0);
-        
-        if(currentEval > bestMove.score) {
-            bestMove = moves[i];
-            bestMove.score = currentEval;
+    Move bestMove = { -1, -1, -1, -1, INF }; //{x1, y1, x2, y2, scor}
+    for (int i = 0; i < lista.count; i++) {
+        GameState copie = *gs;
+        Move m = lista.mutari[i];
+        executa_mutare(m.x1, m.y1, m.x2, m.y2, &copie);
+        float scor = minimax(&copie, DEPTH-1, -INF, INF, 1);
+        if (scor < bestMove.scor) {
+            bestMove = m;
+            bestMove.scor = scor;
         }
     }
-    
     return bestMove;
 }
 

@@ -38,6 +38,14 @@ void genereazaMutariTurn(int x, int y, GameState *gs, MoveList *lista) {
     }
 }
 
+void genereazaToateMutarileTurn(GameState *gs, MoveList *lista, int player) {
+    for (int x = 0; x < 8; x++)
+        for (int y = 0; y < 8; y++)
+            if ((player == 0 && gs->tabla[x][y] == 'T') || 
+                (player == 1 && gs->tabla[x][y] == 't'))
+                genereazaMutariTurn(x, y, gs, lista);
+}
+
 void genereazaMutariRege(int x, int y, GameState *gs, MoveList *lista) {
     static const int king_offsets[8][2] = {
         {1, 0}, {-1, 0}, {0, 1}, {0, -1},
@@ -58,6 +66,15 @@ void genereazaMutariRege(int x, int y, GameState *gs, MoveList *lista) {
             }
         }
     }
+}
+
+void genereazaToateMutarileRege(GameState *gs, MoveList *lista, int player) {
+    for (int x = 0; x < 8; x++)
+        for (int y = 0; y < 8; y++)
+            if ((player == 0 && gs->tabla[x][y] == 'R') || 
+                (player == 1 && gs->tabla[x][y] == 'r')) {
+                genereazaMutariRege(x, y, gs, lista);
+            }
 }
 
 void genereazaMutariPion(int x, int y, GameState *gs, MoveList *lista) {

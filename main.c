@@ -13,7 +13,6 @@ int existaMutareLegala(GameState *gs) {
         for (int y1 = 0; y1 < 8; y1++)
             if ((gs->currentPlayer == 0 && isupper(gs->tabla[x1][y1])) ||
                 (gs->currentPlayer == 1 && islower(gs->tabla[x1][y1]))){
-                    printf("\ncevaaaaaa-----\n");
                 for (int x2 = 0; x2 < 8; x2++)
                     for (int y2 = 0; y2 < 8; y2++){
                         printf("\n %d\n%d\n%d\n%d\n%d\n", gs->currentPlayer, x1,y1,x2,y2);
@@ -26,13 +25,8 @@ int existaMutareLegala(GameState *gs) {
 
 int main() {
 
-    //printf("TEST\n"); fflush(stdout);
-
     GameState gs = initializeGame();
-
-    //printf("currentPlayer la start: %d\n", gs.currentPlayer); fflush(stdout);
-    //printf("Piesa la e2: %c\n", gs.tabla[6][4]); fflush(stdout);
-
+    initializeaza_tabele_negre();
 
     char start[3], finish[3];
     int x1, y1, x2, y2;
@@ -46,14 +40,13 @@ int main() {
         // Rândul AI-ului (negru)
         if (gs.currentPlayer == 1) {
             printf("Engine-ul gândește...\n");
-            printf("\n\n%d\n\n", gs.currentPlayer);
             Move best = findBestMove(&gs);
             if (best.x1 == -1) {
                 printf("Nicio mutare validă! Remiză sau mat.\n");
                 break;
             }
             printf("Engine alege: %c%d-%c%d (Evaluare: %.2f)\n",
-                   'a' + best.y1, 8 - best.x1, 'a' + best.y2, 8 - best.x2, best.score);
+                   'a' + best.y1, 8 - best.x1, 'a' + best.y2, 8 - best.x2, best.scor);
             executa_mutare(best.x1, best.y1, best.x2, best.y2, &gs);
 
             // Verifică șah mat
@@ -99,8 +92,6 @@ int main() {
 
         scanf("%s", finish);
         transformareMiscare(start, finish, &x1, &y1, &x2, &y2);
-
-        printf("Coordonate: x1=%d y1=%d x2=%d y2=%d\n", x1, y1, x2, y2); fflush(stdout);
 
         int valid = validareMiscare(x1, y1, x2, y2, &gs);
 
