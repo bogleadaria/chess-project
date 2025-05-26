@@ -22,7 +22,6 @@ int validareMiscare(int x1, int y1, int x2, int y2, GameState *gs)
     if (piece == ' ' ||
         (gs->currentPlayer == 0 && islower(piece)) ||
         (gs->currentPlayer == 1 && isupper(piece))) {
-        //printf("Jucător gresit!\n");
         return 0;
     }    
 
@@ -163,7 +162,7 @@ void executa_mutare(int x1, int y1, int x2, int y2, GameState *gs)
     {
         char promo;
         printf("Promovare pion! Alege (D, C, T, N): ");
-        scanf(" %c", &promo);
+        scanf("%c", &promo);
         gs->tabla[x2][y2] = (piece == 'P') ? toupper(promo) : tolower(promo);
     }
 }

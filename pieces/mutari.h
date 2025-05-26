@@ -5,6 +5,7 @@
 
 typedef struct {
     int x1, y1, x2, y2;
+    float scor;
 } Move;
 
 typedef struct {
@@ -15,8 +16,10 @@ typedef struct {
 void initMoveList(MoveList *lista);
 
 void genereazaMutariTurn(int x, int y, GameState *gs, MoveList *lista);
+void genereazaToateMutarileTurn(GameState *gs, MoveList *lista, int player);
 
 void genereazaMutariRege(int x, int y, GameState *gs, MoveList *lista);
+void genereazaToateMutarileRege(GameState *gs, MoveList *lista, int player);
 
 void genereazaMutariPion(int x, int y, GameState *gs, MoveList *lista);
 void genereazaToateMutarilePion(GameState *gs, MoveList *lista, int player);
