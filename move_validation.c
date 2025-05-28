@@ -6,12 +6,20 @@
 #include "move_validation.h"
 #include "pieces.h"
 
-void transformareMiscare(char *start, char *finish, int *x1, int *y1, int *x2, int *y2)
+void transformareMiscare(char *start, char *finish, int *x1, int *y1, int *x2, int *y2, bool culoare_ai)
 {
-    *y1 = tolower(start[0]) - 'a';
-    *x1 = 8 - (start[1] - '0');
-    *y2 = tolower(finish[0]) - 'a';
-    *x2 = 8 - (finish[1] - '0');
+    if(culoare_ai == 1){
+        *y1 = tolower(start[0]) - 'a';
+        *x1 = 8 - (start[1] - '0');
+        *y2 = tolower(finish[0]) - 'a';
+        *x2 = 8 - (finish[1] - '0');
+    }
+    else{
+        *y1 = tolower(start[0]) - 'a';
+        *x1 = 8 - (start[1] - '0');
+        *y2 = tolower(finish[0]) - 'a';
+        *x2 = 8 - (finish[1] - '0');
+    }
 }
 
 int validareMiscare(int x1, int y1, int x2, int y2, GameState *gs)
@@ -62,12 +70,27 @@ int validareRocada(int x1, int y1, int x2, int y2, GameState *gs)
     }
 
     // Actualizează pozițiile
-    gs->tabla[x1][regeside ? y1 + 2 : y1 - 2] = gs->tabla[x1][y1];
-    gs->tabla[x1][regeside ? y1 + 1 : y1 - 1] = gs->tabla[x1][turn_y];
-    gs->tabla[x1][y1] = ' ';
-    gs->tabla[x1][turn_y] = ' ';
+    // gs->tabla[x1][regeside ? y1 + 2 : y1 - 2] = gs->tabla[x1][y1];
+    // gs->tabla[x1][regeside ? y1 + 1 : y1 - 1] = gs->tabla[x1][turn_y];
+    // gs->tabla[x1][y1] = ' ';
+    // gs->tabla[x1][turn_y] = ' ';
 
     return 1;
+}
+
+// Verifică dacă există vreo mutare legală pentru jucătorul curent (pentru pat/remiză)
+int existaMutareLegala(GameState *gs) {
+    for (int x1 = 0; x1 < 8; x1++)
+        for (int y1 = 0; y1 < 8; y1++)
+            if ((gs->currentPlayer == 0 && isupper(gs->tabla[x1][y1])) ||
+                (gs->currentPlayer == 1 && islower(gs->tabla[x1][y1]))){
+                for (int x2 = 0; x2 < 8; x2++)
+                    for (int y2 = 0; y2 < 8; y2++){
+                        if (validareMiscare(x1, y1, x2, y2, gs) == 1)
+                            return 1;
+                }
+            }
+    return 0;
 }
 
 void executa_mutare(int x1, int y1, int x2, int y2, GameState *gs)
@@ -128,12 +151,15 @@ void executa_mutare(int x1, int y1, int x2, int y2, GameState *gs)
                 gs->canBlackCastleKingside = 0;
         }
     }
-
     // Gestionează rocada
     if (isRegeMove && abs(y2 - y1) == 2)
     {
         int turn_y = (y2 > y1) ? 7 : 0;
         int new_turn_y = (y2 > y1) ? y2 - 1 : y2 + 1;
+
+        gs->tabla[x1][y2] = piece; // Mută regele
+        gs->tabla[x1][y1] = ' '; // Șterge poziția inițială a regelui
+
         gs->tabla[x1][new_turn_y] = gs->tabla[x1][turn_y];
         gs->tabla[x1][turn_y] = ' ';
     }
@@ -158,11 +184,48 @@ void executa_mutare(int x1, int y1, int x2, int y2, GameState *gs)
     gs->tabla[x1][y1] = ' ';
 
     // Gestionează promovarea pionului
-    if (isPionMove && ((x2 == 0 && piece == 'P') || (x2 == 7 && piece == 'p')))
+    if (isPionMove && (x2 == 0 && piece == 'P'))
     {
-        char promo;
-        printf("Promovare pion! Alege (D, C, T, N): ");
-        scanf("%c", &promo);
-        gs->tabla[x2][y2] = (piece == 'P') ? toupper(promo) : tolower(promo);
+        if (gs->currentPlayer == gs->culoare_ai) {
+            gs->tabla[x2][y2] = 'D'; // AI promovează automat la damă
+        } else {
+            char promo;
+            printf("Promovare pion! Alege (D, C, T, N): ");
+            scanf(" %c", &promo);
+            gs->tabla[x2][y2] = toupper(promo);
+        }
     }
+    else if (isPionMove && (x2 == 7 && piece == 'p'))
+    {
+        if (gs->currentPlayer == gs->culoare_ai) {
+            gs->tabla[x2][y2] = 'd'; // AI promovează automat la damă
+        } else {
+            char promo;
+            printf("Promovare pion! Alege (D, C, T, N): ");
+            scanf(" %c", &promo);
+            gs->tabla[x2][y2] = toupper(promo);
+        }
+    }
+
+    //TODO: output moves to a file as they are made
+}
+
+int mutareIeseDinSah(int x1, int y1, int x2, int y2, GameState *gs)
+{
+    // Salvează starea inițială a tablei
+    char initialPiece = gs->tabla[x1][y1];
+    char targetPiece = gs->tabla[x2][y2];
+
+    // Execută mutarea
+    gs->tabla[x2][y2] = initialPiece;
+    gs->tabla[x1][y1] = ' ';
+
+    // Verifică dacă regele este în șah după mutare
+    int isCheck = isInCheck(gs, gs->currentPlayer);
+
+    // Revin la starea inițială
+    gs->tabla[x1][y1] = initialPiece;
+    gs->tabla[x2][y2] = targetPiece;
+
+    return isCheck;
 }

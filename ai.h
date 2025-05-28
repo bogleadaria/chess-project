@@ -4,10 +4,14 @@
 #include "game.h"
 #include "mutari.h"
 
+#include <stdbool.h>
+
 #define INF 100000
 #define DEPTH 3
 
-Move findBestMove(GameState *gs);
+
+//TODO: add parameter to switch from black to white play
+Move findBestMove(GameState *gs, bool piese_ai);
 void inverseaza_sir(float *sir);
 void initializeaza_tabele_negre();
 float minimax(GameState *gs, int depth, float alpha, float beta, int maximizingPlayer);

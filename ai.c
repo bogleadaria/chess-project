@@ -208,10 +208,9 @@ float minimax(GameState *gs, int depth, float alpha, float beta, int maximizingP
     }
 }
 
-Move findBestMove(GameState *gs) {
+Move findBestMove(GameState *gs, bool culoare_ai) {
     MoveList lista;
     initMoveList(&lista);
-
     int jucator = gs->currentPlayer;
 
     // Generează toate mutările pentru piesele jucătorului curent
@@ -220,41 +219,33 @@ Move findBestMove(GameState *gs) {
     genereazaToateMutarileNebun(gs, &lista, jucator);
     genereazaToateMutarileTurn(gs, &lista, jucator);
     genereazaToateMutarileDama(gs, &lista, jucator);
+    genereazaToateMutarileRege(gs, &lista, jucator);
 
-    // Pentru rege
-    for (int x = 0; x < 8; x++)
-        for (int y = 0; y < 8; y++) {
-            char piece = gs->tabla[x][y];
-            if ((jucator == 0 && piece == 'R') || (jucator == 1 && piece == 'r')) {
-                genereazaMutariRege(x, y, gs, &lista);
+    Move bestMove;
+    if (culoare_ai==0) {
+        bestMove.scor = -INF;
+        for (int i = 0; i < lista.count; i++) {
+            GameState copie = *gs;
+            Move m = lista.mutari[i];
+            executa_mutare(m.x1, m.y1, m.x2, m.y2, &copie);
+            float scor = minimax(&copie, DEPTH-1, -INF, INF, 0); // maximizingPlayer=0 pentru adversar (negru)
+            if (scor > bestMove.scor || i == 0) {
+                bestMove = m;
+                bestMove.scor = scor;
             }
         }
-
-    Move bestMove = { -1, -1, -1, -1, INF }; //{x1, y1, x2, y2, scor}
-    for (int i = 0; i < lista.count; i++) {
-        GameState copie = *gs;
-        Move m = lista.mutari[i];
-        executa_mutare(m.x1, m.y1, m.x2, m.y2, &copie);
-        float scor = minimax(&copie, DEPTH-1, -INF, INF, 1);
-        if (scor < bestMove.scor) {
-            bestMove = m;
-            bestMove.scor = scor;
+    } else {
+        bestMove.scor = INF;
+        for (int i = 0; i < lista.count; i++) {
+            GameState copie = *gs;
+            Move m = lista.mutari[i];
+            executa_mutare(m.x1, m.y1, m.x2, m.y2, &copie);
+            float scor = minimax(&copie, DEPTH-1, -INF, INF, 1); // maximizingPlayer=1 pentru adversar (alb)
+            if (scor < bestMove.scor || i == 0) {
+                bestMove = m;
+                bestMove.scor = scor;
+            }
         }
     }
     return bestMove;
 }
-
-// Generare mutări: Pentru fiecare piesă a jucătorului curent, generează toate mutările legale
-// Simulare mutări: Creează o copie a stării jocului și aplică mutarea
-// Evaluare recursivă: Apelează minimax() pentru starea nouă cu adâncime redusă
-// Alpha-Beta Pruning: Taie ramurile care nu pot influența rezultatul final
-// Selectare mutare: Alege mutarea cu cel mai bun scor evaluat
-// Optimizări importante:
-// Move ordering: Sortează mutările înainte de evaluare (capturi primele)
-// Tabele poziționale: Asignă bonusuri/penalizări în funcție de poziția pieselor
-// Iterative deepening: Poate fi adăugat pentru căutare progresivă
-// Cum funcționează evaluarea:
-// Piese albe: +1 pentru pion, +3 pentru cal/nebun etc.
-// Piese negre: -1 pentru pion, -3 pentru cal/nebun etc.
-// Bonusuri poziționale din tabele
-// Bonusuri pentru rocadă și alte factori strategice
