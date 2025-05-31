@@ -16,6 +16,7 @@ int main()
 
     char start[50], finish[3], fisier[50];
     int x1, y1, x2, y2;
+    visual();
 
     printf("\n\n\nAlegeti o culore (alb/negru): ");
     char culoare[10];
