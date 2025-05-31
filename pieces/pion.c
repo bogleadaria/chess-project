@@ -23,7 +23,6 @@ int Pion(int x1, int y1, int x2, int y2, GameState *gs)
         if ((abs(y1 - y2) == 1) && (x2 == x1 + 1) && gs->tabla[x2][y2] >= 'A' && gs->tabla[x2][y2] <= 'Z')
             return 1;
     }
-    return 0;
 
     if (gs->enPassantTarget[0] == x2 && gs->enPassantTarget[1] == y2 &&
         abs(y2 - y1) == 1 && ((gs->tabla[x1][y1] == 'P' && x2 == x1 - 1) || (gs->tabla[x1][y1] == 'p' && x2 == x1 + 1)))
@@ -31,4 +30,5 @@ int Pion(int x1, int y1, int x2, int y2, GameState *gs)
         gs->tabla[x1][y2] = ' ';
         return 1;
     }
+    return 0;
 }
