@@ -3,6 +3,7 @@
 #include <SDL2/SDL_image.h>
 #include "game.h"
 #include "move_validation.h"
+
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 800
 #define SQUARE_SIZE (SCREEN_WIDTH / 8)
@@ -10,18 +11,10 @@
 // Map piece character to texture index
 int piece_char_to_index(char piece) {
     switch (piece) {
-        case 'R': return 0; // White King
-        case 'D': return 1; // White Queen
-        case 'T': return 2; // White Rook
-        case 'C': return 3; // White Knight
-        case 'N': return 4; // White Bishop
-        case 'P': return 5; // White Pawn
-        case 'r': return 6; // Black King
-        case 'd': return 7; // Black Queen
-        case 't': return 8; // Black Rook
-        case 'c': return 9; // Black Knight
-        case 'n': return 10; // Black Bishop
-        case 'p': return 11; // Black Pawn
+        case 'R': return 0; case 'D': return 1; case 'T': return 2;
+        case 'C': return 3; case 'N': return 4; case 'P': return 5;
+        case 'r': return 6; case 'd': return 7; case 't': return 8;
+        case 'c': return 9; case 'n': return 10; case 'p': return 11;
         default: return -1;
     }
 }
@@ -46,11 +39,12 @@ void drawPiece(SDL_Renderer* renderer, int x, int y, char piece, SDL_Texture* te
     SDL_RenderCopy(renderer, textures[idx], NULL, &dst);
 }
 
-// Draw all pieces
-void drawAllPieces(SDL_Renderer* renderer, char tabla[8][8], SDL_Texture* textures[12]) {
+// Draw all pieces except the one being dragged
+void drawAllPieces(SDL_Renderer* renderer, char tabla[8][8], SDL_Texture* textures[12], int drag_x, int drag_y, int dragging) {
     for (int i = 0; i < 8; i++)
         for (int j = 0; j < 8; j++)
-            drawPiece(renderer, i, j, tabla[i][j], textures);
+            if (!(dragging && i == drag_x && j == drag_y))
+                drawPiece(renderer, i, j, tabla[i][j], textures);
 }
 
 // Draw the chessboard
@@ -98,27 +92,45 @@ void visual() {
     }
 
     GameState gs = initializeGame();
-    int selected = 0, sel_x = -1, sel_y = -1;
+    int dragging = 0, drag_x = -1, drag_y = -1;
     int running = 1;
+    int mouse_x = 0, mouse_y = 0;
     SDL_Event event;
 
     while (running) {
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) running = 0;
+
+            // Start drag
             if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) {
-                int mx = event.button.y / SQUARE_SIZE;
-                int my = event.button.x / SQUARE_SIZE;
-                if (!selected && gs.tabla[mx][my] != ' ' &&
-                    ((gs.currentPlayer == 0 && gs.tabla[mx][my] >= 'A' && gs.tabla[mx][my] <= 'Z') ||
-                     (gs.currentPlayer == 1 && gs.tabla[mx][my] >= 'a' && gs.tabla[mx][my] <= 'z'))) {
-                    sel_x = mx; sel_y = my; selected = 1;
-                } else if (selected) {
-                    if (validareMiscare(sel_x, sel_y, mx, my, &gs)) {
-                        executa_mutare(sel_x, sel_y, mx, my, &gs);
-                        gs.currentPlayer = !gs.currentPlayer;
-                    }
-                    selected = 0;
+                int row = event.button.y / SQUARE_SIZE;
+                int col = event.button.x / SQUARE_SIZE;
+                char piece = gs.tabla[row][col];
+                if (piece != ' ' &&
+                    ((gs.currentPlayer == 0 && piece >= 'A' && piece <= 'Z') ||
+                     (gs.currentPlayer == 1 && piece >= 'a' && piece <= 'z'))) {
+                    dragging = 1;
+                    drag_x = row;
+                    drag_y = col;
+                    mouse_x = event.button.x;
+                    mouse_y = event.button.y;
                 }
+            }
+            // Dragging motion
+            if (event.type == SDL_MOUSEMOTION && dragging) {
+                mouse_x = event.motion.x;
+                mouse_y = event.motion.y;
+            }
+            // Drop
+            if (event.type == SDL_MOUSEBUTTONUP && event.button.button == SDL_BUTTON_LEFT && dragging) {
+                int to_row = event.button.y / SQUARE_SIZE;
+                int to_col = event.button.x / SQUARE_SIZE;
+                if (validareMiscare(drag_x, drag_y, to_row, to_col, &gs)) {
+                    executa_mutare(drag_x, drag_y, to_row, to_col, &gs);
+                    gs.currentPlayer = !gs.currentPlayer;
+                }
+                dragging = 0;
+                drag_x = drag_y = -1;
             }
         }
 
@@ -126,13 +138,15 @@ void visual() {
         SDL_RenderClear(renderer);
 
         drawChessboard(renderer);
-        drawAllPieces(renderer, gs.tabla, piece_textures);
+        drawAllPieces(renderer, gs.tabla, piece_textures, drag_x, drag_y, dragging);
 
-        // Highlight selected square
-        if (selected) {
-            SDL_Rect r = {sel_y * SQUARE_SIZE, sel_x * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE};
-            SDL_SetRenderDrawColor(renderer, 255, 0, 0, 100);
-            SDL_RenderFillRect(renderer, &r);
+        // Draw dragged piece following mouse
+        if (dragging && gs.tabla[drag_x][drag_y] != ' ') {
+            int idx = piece_char_to_index(gs.tabla[drag_x][drag_y]);
+            if (idx >= 0 && piece_textures[idx]) {
+                SDL_Rect dst = { mouse_x - SQUARE_SIZE / 2, mouse_y - SQUARE_SIZE / 2, SQUARE_SIZE, SQUARE_SIZE };
+                SDL_RenderCopy(renderer, piece_textures[idx], NULL, &dst);
+            }
         }
 
         SDL_RenderPresent(renderer);
