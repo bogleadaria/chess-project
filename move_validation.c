@@ -117,6 +117,7 @@ int existaMutareLegala(GameState *gs)
         for (int y1 = 0; y1 < 8; y1++)
             if ((gs->currentPlayer == 0 && isupper(gs->tabla[x1][y1])) ||
                 (gs->currentPlayer == 1 && islower(gs->tabla[x1][y1])))
+
             {
                 for (int x2 = 0; x2 < 8; x2++)
                     for (int y2 = 0; y2 < 8; y2++)
@@ -126,6 +127,7 @@ int existaMutareLegala(GameState *gs)
                     }
             }
     return 0;
+
 }
 
 void executa_mutare(int x1, int y1, int x2, int y2, GameState *gs)
