@@ -279,7 +279,8 @@ void visual(int mode, int color) {
             || (mode == 3) // AI vs AI, always AI's turn
         )) {
             SDL_Delay(300);
-            Move best = findBestMove(&gs, gs.currentPlayer);
+            Move nimic = { .x1 = -1, .y1 = -1, .x2 = -1, .y2 = -1, .scor = 0.0 };
+            Move best = findBestMove(&gs, gs.culoare_ai, nimic);
             if (best.x1 != -1) {
                 executa_mutare(best.x1, best.y1, best.x2, best.y2, &gs);
                 gs.currentPlayer = !gs.currentPlayer;
