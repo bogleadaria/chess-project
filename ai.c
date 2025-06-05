@@ -82,7 +82,6 @@ void inverseaza_sir(float *sir)
 {
     int i, j;
     float aux;
-
     for (i = 0, j = 63; i < j; i++, j--)
     {
         aux = sir[i];
@@ -95,19 +94,14 @@ void initializeaza_tabele_negre()
 {
     memcpy(tabla_pion_n, tabla_pion_a, sizeof(tabla_pion_a));
     inverseaza_sir(tabla_pion_n);
-
     memcpy(tabla_cal_n, tabla_cal_a, sizeof(tabla_cal_a));
     inverseaza_sir(tabla_cal_n);
-
     memcpy(tabla_nebun_n, tabla_nebun_a, sizeof(tabla_nebun_a));
     inverseaza_sir(tabla_nebun_n);
-
     memcpy(tabla_turn_n, tabla_turn_a, sizeof(tabla_turn_a));
     inverseaza_sir(tabla_turn_n);
-
     memcpy(tabla_dama_n, tabla_dama_a, sizeof(tabla_dama_a));
     inverseaza_sir(tabla_dama_n);
-
     memcpy(tabla_rege_n, tabla_rege_a, sizeof(tabla_rege_a));
     inverseaza_sir(tabla_rege_n);
 }
@@ -115,14 +109,12 @@ void initializeaza_tabele_negre()
 float evaluatePosition(GameState *gs)
 {
     float scor = 0.0f;
-
     for (int i = 0; i < 8; i++)
     {
         for (int j = 0; j < 8; j++)
         {
             char piece = gs->tabla[i][j];
             int pos = i * 8 + j;
-
             switch (piece)
             {
             case 'P':
@@ -170,7 +162,6 @@ float evaluatePosition(GameState *gs)
         scor += 0.5;
     if (gs->canBlackCastleKingside)
         scor -= 0.5;
-
     return scor;
 }
 
@@ -180,7 +171,6 @@ float minimax(GameState *gs, int depth, float alpha, float beta, int maximizingP
     {
         return evaluatePosition(gs);
     }
-
     MoveList lista;
     initMoveList(&lista);
 
@@ -237,17 +227,13 @@ float minimax(GameState *gs, int depth, float alpha, float beta, int maximizingP
     }
 }
 
-
 Move findBestMove(GameState *gs, bool culoare_ai, Move avoid)
 {
     MoveList lista;
     initMoveList(&lista);
-
     int jucator = gs->currentPlayer;
 
     // Generate all moves
-    MoveList lista;
-    initMoveList(&lista);
     genereazaToateMutarilePion(gs, &lista, jucator);
     genereazaToateMutarileCal(gs, &lista, jucator);
     genereazaToateMutarileNebun(gs, &lista, jucator);
@@ -255,22 +241,18 @@ Move findBestMove(GameState *gs, bool culoare_ai, Move avoid)
     genereazaToateMutarileDama(gs, &lista, jucator);
     genereazaToateMutarileRege(gs, &lista, jucator);
 
-
     Move bestMove;
     if (culoare_ai == 0)
     {
         bestMove.scor = -INF;
         for (int i = 0; i < lista.count; i++)
         {
-
             GameState copie = *gs;
-            Move m = legalMoves[i];
+            Move m = lista.mutari[i];
             executa_mutare(m.x1, m.y1, m.x2, m.y2, &copie);
-
             float scor = minimax(&copie, DEPTH - 1, -INF, INF, 0); // maximizingPlayer=0 pentru adversar (negru)
             if (scor > bestMove.scor || i == 0)
             {
-
                 bestMove = m;
                 bestMove.scor = scor;
             }
@@ -279,18 +261,14 @@ Move findBestMove(GameState *gs, bool culoare_ai, Move avoid)
     else
     {
         bestMove.scor = INF;
-
         for (int i = 0; i < lista.count; i++)
         {
-
             GameState copie = *gs;
-            Move m = legalMoves[i];
+            Move m = lista.mutari[i];
             executa_mutare(m.x1, m.y1, m.x2, m.y2, &copie);
-
             float scor = minimax(&copie, DEPTH - 1, -INF, INF, 1); // maximizingPlayer=1 pentru adversar (alb)
             if (scor < bestMove.scor || i == 0)
             {
-
                 bestMove = m;
                 bestMove.scor = scor;
             }
@@ -298,28 +276,3 @@ Move findBestMove(GameState *gs, bool culoare_ai, Move avoid)
     }
     return bestMove;
 }
-
-// void jocAIVsAI(GameState *gs) {
-//     while (1) {
-//         // Afișează tabla
-//         printTabla(gs->tabla, gs->culoare_ai);
-
-//         // Verifică dacă jocul s-a terminat
-//         if (isCheckmate(gs)) {
-//             printf("Șah mat! %s câștigă!\n", gs->currentPlayer ? "Alb" : "Negru");
-//             break;
-//         }
-//         if (isStalemate(gs)) {
-//             printf("Pat! Partida s-a terminat la egalitate.\n");
-//             break;
-//         }
-
-//         // AI-ul gândește și execută mutarea
-//         printf("AI (%s) gândește...\n", gs->currentPlayer ? "Alb" : "Negru");
-//         Move bestMove = findBestMove(gs, gs->culoare_ai);
-//         executa_mutare(bestMove.x1, bestMove.y1, bestMove.x2, bestMove.y2, gs);
-
-//         // Schimbă jucătorul curent
-//         gs->currentPlayer = !gs->currentPlayer;
-//     }
-// }

@@ -57,11 +57,6 @@ void transformareInversa(int *x1, int *y1, int *x2, int *y2, int *x1_t, int *y1_
 int validareMiscare(int x1, int y1, int x2, int y2, GameState *gs)
 {
     char piece = gs->tabla[x1][y1];
-    char dest = gs->tabla[x2][y2];
-
-    // Prevent capturing the king
-    if (dest == 'R' || dest == 'r')
-        return 0;
 
     // Verifică dacă piesa aparține jucătorului curent
     if (piece == ' ' ||
@@ -89,17 +84,14 @@ int validareMiscare(int x1, int y1, int x2, int y2, GameState *gs)
         return 0;
     }
 }
-
 int validareRocada(int x1, int y1, int x2, int y2, GameState *gs)
 {
     int regeside = (y2 > y1);
     int turn_y = regeside ? 7 : 0;
-
     // Verifică drepturile de rocadă
     if ((gs->currentPlayer == 0 && !(regeside ? gs->canWhiteCastleKingside : gs->canWhiteCastleQueenside)) ||
         (gs->currentPlayer == 1 && !(regeside ? gs->canBlackCastleKingside : gs->canBlackCastleQueenside)))
         return 0;
-
     // Verifică spațiile libere și atacate
     for (int y = y1 + (regeside ? 1 : -1); y != turn_y; y += (regeside ? 1 : -1))
     {
@@ -117,17 +109,54 @@ int existaMutareLegala(GameState *gs)
         for (int y1 = 0; y1 < 8; y1++)
             if ((gs->currentPlayer == 0 && isupper(gs->tabla[x1][y1])) ||
                 (gs->currentPlayer == 1 && islower(gs->tabla[x1][y1])))
-
             {
                 for (int x2 = 0; x2 < 8; x2++)
                     for (int y2 = 0; y2 < 8; y2++)
                     {
-                        if (validareMiscare(x1, y1, x2, y2, gs) == 1)
-                            return 1;
+                        for (int y2 = 0; y2 < 8; y2++)
+                        {
+                            if (validareMiscare(x1, y1, x2, y2, gs) == 1)
+                                return 1;
+                        }
                     }
             }
     return 0;
+}
 
+void salveazaIstoricMutari(GameState *gs, int x1, int y1, int x2, int y2)
+{
+    int x1_t, y1_t, x2_t, y2_t;
+    transformareInversa(&x1, &y1, &x2, &y2, &x1_t, &y1_t, &x2_t, &y2_t, gs->culoare_ai);
+    switch (toupper(gs->tabla[x1][y1]))
+    {
+    case 'P':
+        gs->pgn.history[gs->pgn.historyCount][0] = '\0';
+        break;
+    case 'C':
+        gs->pgn.history[gs->pgn.historyCount][0] = 'N';
+        break;
+    case 'N':
+        gs->pgn.history[gs->pgn.historyCount][0] = 'B';
+        break;
+    case 'T':
+        gs->pgn.history[gs->pgn.historyCount][0] = 'R';
+        break;
+    case 'D':
+        gs->pgn.history[gs->pgn.historyCount][0] = 'Q';
+        break;
+    case 'R':
+        gs->pgn.history[gs->pgn.historyCount][0] = 'K';
+        break;
+
+    default:
+        break;
+    }
+    gs->pgn.history[gs->pgn.historyCount][1] = y1_t;
+    gs->pgn.history[gs->pgn.historyCount][2] = x1_t;
+    gs->pgn.history[gs->pgn.historyCount][3] = y2_t;
+    gs->pgn.history[gs->pgn.historyCount][4] = x2_t;
+    gs->pgn.history[gs->pgn.historyCount][5] = '\0'; // Asigură terminarea șirului
+    gs->pgn.historyCount++;
 }
 
 void executa_mutare(int x1, int y1, int x2, int y2, GameState *gs)
@@ -159,13 +188,11 @@ void executa_mutare(int x1, int y1, int x2, int y2, GameState *gs)
         gs->enPassantTarget[0] = -1;
         gs->enPassantTarget[1] = -1;
     }
-
     // Gestionează captura en passant
     if (isPionMove && y2 != y1 && gs->tabla[x2][y2] == ' ')
     {
         gs->tabla[x1][y2] = ' '; // Șterge pionul capturat
     }
-
     // Actualizează drepturile de rocadă
     if (isRegeMove)
     {
@@ -215,6 +242,7 @@ void executa_mutare(int x1, int y1, int x2, int y2, GameState *gs)
 
         gs->tabla[x1][y2] = piece; // Mută regele
         gs->tabla[x1][y1] = ' ';   // Șterge poziția inițială a regelui
+        gs->tabla[x1][y1] = ' ';   // Șterge poziția inițială a regelui
 
         gs->tabla[x1][new_turn_y] = gs->tabla[x1][turn_y];
         gs->tabla[x1][turn_y] = ' ';
@@ -233,16 +261,13 @@ void executa_mutare(int x1, int y1, int x2, int y2, GameState *gs)
     {
         gs->halfmoveClock++;
     }
-
     if (gs->currentPlayer == 1)
     {
         gs->fullmoveNumber++;
     }
-
     // Mută piesa și șterge poziția inițială
     gs->tabla[x2][y2] = piece;
     gs->tabla[x1][y1] = ' ';
-
     // Gestionează promovarea pionului
     if (isPionMove && (x2 == 0 && piece == 'P'))
     {
@@ -272,42 +297,7 @@ void executa_mutare(int x1, int y1, int x2, int y2, GameState *gs)
             gs->tabla[x2][y2] = tolower(promo);
         }
     }
-}
-
-void salveazaIstoricMutari(GameState *gs, int x1, int y1, int x2, int y2)
-{
-    int x1_t, y1_t, x2_t, y2_t;
-    transformareInversa(&x1, &y1, &x2, &y2, &x1_t, &y1_t, &x2_t, &y2_t, gs->culoare_ai);
-    switch (toupper(gs->tabla[x1][y1]))
-    {
-    case 'P':
-        gs->pgn.history[gs->pgn.historyCount][0] = '\0';
-        break;
-    case 'C':
-        gs->pgn.history[gs->pgn.historyCount][0] = 'N';
-        break;
-    case 'N':
-        gs->pgn.history[gs->pgn.historyCount][0] = 'B';
-        break;
-    case 'T':
-        gs->pgn.history[gs->pgn.historyCount][0] = 'R';
-        break;
-    case 'D':
-        gs->pgn.history[gs->pgn.historyCount][0] = 'Q';
-        break;
-    case 'R':
-        gs->pgn.history[gs->pgn.historyCount][0] = 'K';
-        break;
-
-    default:
-        break;
-    }
-    gs->pgn.history[gs->pgn.historyCount][1] = y1_t;
-    gs->pgn.history[gs->pgn.historyCount][2] = x1_t;
-    gs->pgn.history[gs->pgn.historyCount][3] = y2_t;
-    gs->pgn.history[gs->pgn.historyCount][4] = x2_t;
-    gs->pgn.history[gs->pgn.historyCount][5] = '\0'; // Asigură terminarea șirului
-    gs->pgn.historyCount++;
+    salveazaIstoricMutari(gs, x1, y1, x2, y2);
 }
 
 int mutareIeseDinSah(int x1, int y1, int x2, int y2, GameState *gs)
@@ -315,14 +305,11 @@ int mutareIeseDinSah(int x1, int y1, int x2, int y2, GameState *gs)
     // Salvează starea inițială a tablei
     char initialPiece = gs->tabla[x1][y1];
     char targetPiece = gs->tabla[x2][y2];
-
     // Execută mutarea
     gs->tabla[x2][y2] = initialPiece;
     gs->tabla[x1][y1] = ' ';
-
     // Verifică dacă regele este în șah după mutare
     int isCheck = isInCheck(gs, gs->currentPlayer);
-
     // Revin la starea inițială
     gs->tabla[x1][y1] = initialPiece;
     gs->tabla[x2][y2] = targetPiece;
