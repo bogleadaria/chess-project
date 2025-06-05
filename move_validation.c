@@ -57,11 +57,6 @@ void transformareInversa(int *x1, int *y1, int *x2, int *y2, int *x1_t, int *y1_
 int validareMiscare(int x1, int y1, int x2, int y2, GameState *gs)
 {
     char piece = gs->tabla[x1][y1];
-    char dest = gs->tabla[x2][y2];
-
-    // Prevent capturing the king
-    if (dest == 'R' || dest == 'r')
-        return 0;
 
     // Verifică dacă piesa aparține jucătorului curent
     if (piece == ' ' ||
@@ -89,17 +84,14 @@ int validareMiscare(int x1, int y1, int x2, int y2, GameState *gs)
         return 0;
     }
 }
-
 int validareRocada(int x1, int y1, int x2, int y2, GameState *gs)
 {
     int regeside = (y2 > y1);
     int turn_y = regeside ? 7 : 0;
-
     // Verifică drepturile de rocadă
     if ((gs->currentPlayer == 0 && !(regeside ? gs->canWhiteCastleKingside : gs->canWhiteCastleQueenside)) ||
         (gs->currentPlayer == 1 && !(regeside ? gs->canBlackCastleKingside : gs->canBlackCastleQueenside)))
         return 0;
-
     // Verifică spațiile libere și atacate
     for (int y = y1 + (regeside ? 1 : -1); y != turn_y; y += (regeside ? 1 : -1))
     {
@@ -117,15 +109,18 @@ int existaMutareLegala(GameState *gs)
         for (int y1 = 0; y1 < 8; y1++)
             if ((gs->currentPlayer == 0 && isupper(gs->tabla[x1][y1])) ||
                 (gs->currentPlayer == 1 && islower(gs->tabla[x1][y1])))
+            {
                 for (int x2 = 0; x2 < 8; x2++)
                     for (int y2 = 0; y2 < 8; y2++)
-                        if (validareMiscare(x1, y1, x2, y2, gs)) {
-                            GameState copie = *gs;
-                            executa_mutare(x1, y1, x2, y2, &copie);
-                            if (!isInCheck(&copie, gs->currentPlayer))
-                                return 1; // există cel puțin o mutare legală
+                    {
+                        for (int y2 = 0; y2 < 8; y2++)
+                        {
+                            if (validareMiscare(x1, y1, x2, y2, gs) == 1)
+                                return 1;
                         }
-    return 0; // niciuna nu scoate regele din șah
+                    }
+            }
+    return 0;
 }
 
 void executa_mutare(int x1, int y1, int x2, int y2, GameState *gs)
@@ -157,13 +152,11 @@ void executa_mutare(int x1, int y1, int x2, int y2, GameState *gs)
         gs->enPassantTarget[0] = -1;
         gs->enPassantTarget[1] = -1;
     }
-
     // Gestionează captura en passant
     if (isPionMove && y2 != y1 && gs->tabla[x2][y2] == ' ')
     {
         gs->tabla[x1][y2] = ' '; // Șterge pionul capturat
     }
-
     // Actualizează drepturile de rocadă
     if (isRegeMove)
     {
@@ -213,6 +206,7 @@ void executa_mutare(int x1, int y1, int x2, int y2, GameState *gs)
 
         gs->tabla[x1][y2] = piece; // Mută regele
         gs->tabla[x1][y1] = ' ';   // Șterge poziția inițială a regelui
+        gs->tabla[x1][y1] = ' ';   // Șterge poziția inițială a regelui
 
         gs->tabla[x1][new_turn_y] = gs->tabla[x1][turn_y];
         gs->tabla[x1][turn_y] = ' ';
@@ -231,16 +225,13 @@ void executa_mutare(int x1, int y1, int x2, int y2, GameState *gs)
     {
         gs->halfmoveClock++;
     }
-
     if (gs->currentPlayer == 1)
     {
         gs->fullmoveNumber++;
     }
-
     // Mută piesa și șterge poziția inițială
     gs->tabla[x2][y2] = piece;
     gs->tabla[x1][y1] = ' ';
-
     // Gestionează promovarea pionului
     if (isPionMove && (x2 == 0 && piece == 'P'))
     {
@@ -313,14 +304,11 @@ int mutareIeseDinSah(int x1, int y1, int x2, int y2, GameState *gs)
     // Salvează starea inițială a tablei
     char initialPiece = gs->tabla[x1][y1];
     char targetPiece = gs->tabla[x2][y2];
-
     // Execută mutarea
     gs->tabla[x2][y2] = initialPiece;
     gs->tabla[x1][y1] = ' ';
-
     // Verifică dacă regele este în șah după mutare
     int isCheck = isInCheck(gs, gs->currentPlayer);
-
     // Revin la starea inițială
     gs->tabla[x1][y1] = initialPiece;
     gs->tabla[x2][y2] = targetPiece;
