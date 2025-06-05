@@ -25,6 +25,11 @@ void transformareMiscare(char *start, char *finish, int *x1, int *y1, int *x2, i
 int validareMiscare(int x1, int y1, int x2, int y2, GameState *gs)
 {
     char piece = gs->tabla[x1][y1];
+    char dest = gs->tabla[x2][y2];
+
+    // Prevent capturing the king
+    if (dest == 'R' || dest == 'r')
+        return 0;
 
     // Verifică dacă piesa aparține jucătorului curent
     if (piece == ' ' ||
@@ -68,12 +73,6 @@ int validareRocada(int x1, int y1, int x2, int y2, GameState *gs)
         if (gs->tabla[x1][y] != ' ' || isSquareAttacked(gs, x1, y, !gs->currentPlayer))
             return 0;
     }
-
-    // Actualizează pozițiile
-    // gs->tabla[x1][regeside ? y1 + 2 : y1 - 2] = gs->tabla[x1][y1];
-    // gs->tabla[x1][regeside ? y1 + 1 : y1 - 1] = gs->tabla[x1][turn_y];
-    // gs->tabla[x1][y1] = ' ';
-    // gs->tabla[x1][turn_y] = ' ';
 
     return 1;
 }
