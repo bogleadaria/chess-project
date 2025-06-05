@@ -57,6 +57,11 @@ void transformareInversa(int *x1, int *y1, int *x2, int *y2, int *x1_t, int *y1_
 int validareMiscare(int x1, int y1, int x2, int y2, GameState *gs)
 {
     char piece = gs->tabla[x1][y1];
+    char dest = gs->tabla[x2][y2];
+
+    // Prevent capturing the king
+    if (dest == 'R' || dest == 'r')
+        return 0;
 
     // Verifică dacă piesa aparține jucătorului curent
     if (piece == ' ' ||

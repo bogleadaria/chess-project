@@ -19,4 +19,4 @@ make
 
 
 Manual terminal commands: 
-gcc -Wall -lSDL2 -I. -Ipieces main.c game.c move_validation.c pieces/*.c -o chess_game
+gcc -Wall -I. -Ipieces main.c g.c game.c move_validation.c ai.c pieces/*.c -lm -o chess_game -lSDL2 -lSDL2_image && ./chess_game
