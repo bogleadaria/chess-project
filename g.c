@@ -214,14 +214,16 @@ void visual(int mode, int color) {
     SDL_Event event;
 
     int flip = (mode == 1 && color == 1); // flip if human vs AI and human is black
+    int gameover = 0;
+    char end_message[128] = "";
 
     while (running) {
         // --- AI MOVE LOGIC ---
-        if (
+        if (!gameover && (
             (mode == 1 && gs.currentPlayer == gs.culoare_ai) // Human vs AI, AI's turn
             || (mode == 3) // AI vs AI, always AI's turn
-        ) {
-            SDL_Delay(300); // Optional: slow down AI moves
+        )) {
+            SDL_Delay(300);
             Move best = findBestMove(&gs, gs.currentPlayer);
             if (best.x1 != -1) {
                 executa_mutare(best.x1, best.y1, best.x2, best.y2, &gs);
@@ -232,11 +234,9 @@ void visual(int mode, int color) {
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) running = 0;
 
-            // Only allow human moves in Human vs AI (when it's human's turn) or Human vs Human
-            int human_turn = (mode == 2) ||
-                             (mode == 1 && gs.currentPlayer != gs.culoare_ai);
+            int human_turn = (mode == 2) || (mode == 1 && gs.currentPlayer != gs.culoare_ai);
 
-            if (human_turn) {
+            if (!gameover && human_turn) {
                 // Start drag
                 if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) {
                     int row = event.button.y / SQUARE_SIZE;
@@ -265,13 +265,35 @@ void visual(int mode, int color) {
                     int to_col = event.button.x / SQUARE_SIZE;
                     int board_to_row = flip ? 7 - to_row : to_row;
                     int board_to_col = flip ? 7 - to_col : to_col;
+                    // Only allow moves that get out of check
                     if (validareMiscare(drag_x, drag_y, board_to_row, board_to_col, &gs)) {
-                        executa_mutare(drag_x, drag_y, board_to_row, board_to_col, &gs);
-                        gs.currentPlayer = !gs.currentPlayer;
+                        // Simulate the move
+                        GameState gs_copy = gs;
+                        executa_mutare(drag_x, drag_y, board_to_row, board_to_col, &gs_copy);
+                        if (!isInCheck(&gs_copy, gs.currentPlayer)) {
+                            executa_mutare(drag_x, drag_y, board_to_row, board_to_col, &gs);
+                            gs.currentPlayer = !gs.currentPlayer;
+                        }
+                        // else: illegal move, do nothing
                     }
                     dragging = 0;
                     drag_x = drag_y = -1;
                 }
+            }
+        }
+
+        // --- ENDGAME CHECKS ---
+        if (!gameover) {
+            if (isCheckmate(&gs)) {
+                snprintf(end_message, sizeof(end_message), "Șah mat! %s câștigă!", gs.currentPlayer ? "Alb" : "Negru");
+                gameover = 1;
+            } else if (!existaMutareLegala(&gs)) {
+                if (isInCheck(&gs, gs.currentPlayer)) {
+                    snprintf(end_message, sizeof(end_message), "Șah mat! %s câștigă!", gs.currentPlayer ? "Alb" : "Negru");
+                } else {
+                    snprintf(end_message, sizeof(end_message), "Remiză (pat)!");
+                }
+                gameover = 1;
             }
         }
 
@@ -292,6 +314,21 @@ void visual(int mode, int color) {
                 SDL_Rect dst = { draw_x, draw_y, SQUARE_SIZE, SQUARE_SIZE };
                 SDL_RenderCopy(renderer, piece_textures[idx], NULL, &dst);
             }
+        }
+
+        // Draw end message if game is over
+        if (gameover && end_message[0]) {
+            TTF_Font* font = TTF_OpenFont("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 36);
+            SDL_Color color = {255, 0, 0};
+            SDL_Surface* surface = TTF_RenderUTF8_Blended(font, end_message, color);
+            SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+            int tw, th;
+            SDL_QueryTexture(texture, NULL, NULL, &tw, &th);
+            SDL_Rect dst = { (SCREEN_WIDTH-tw)/2, (SCREEN_HEIGHT-th)/2, tw, th };
+            SDL_RenderCopy(renderer, texture, NULL, &dst);
+            SDL_FreeSurface(surface);
+            SDL_DestroyTexture(texture);
+            TTF_CloseFont(font);
         }
 
         SDL_RenderPresent(renderer);
