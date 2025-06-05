@@ -48,8 +48,6 @@ int validareRocada(int x1, int y1, int x2, int y2, GameState *gs);
 void salveazaJocFEN(const GameState *gs, const char *filename);
 void salveazaJocPGN(const GameState *gs, const char *filename);
 void inchideJoc();
-// TODO: add parameter to load from fen notation (board state)
-//       or board notation (PGN File)
 int reincepereJoc(GameState *gs, const char *filename, PGN *pgn, bool type);
 void golesteFisierMiscari();
 void afiseazaHeaderPGN(PGN *pgn);
