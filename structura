@@ -6,12 +6,19 @@ project/
 ├── move_validation.h 
 ├── ai.c                 # Funcții pentru AI (dacă este cazul)
 ├── ai.h                 # Header pentru ai.c
+├── Dockerfile           
+├── g.c                  
+├── Makefile
+├── menu.c
+├── menu.h
+├── README.move_validation
+├── sample_code.c
 ├── pieces/
 │   ├── pion.c           # Funcții pentru mutările pionului
 │   ├── cal.c            # Funcții pentru mutările calului
 │   ├── nebun.c          # Funcții pentru mutările nebunului
 │   ├── turn.c           # Funcții pentru mutările turnului
-│   ├── dama/regina.c    # Funcții pentru mutările damei
+│   ├── dama.c           # Funcții pentru mutările damei
 │   ├── rege.c           # Funcții pentru mutările regelui
 |   ├── mutari.c         # Funcții comune pentru mutări
 │   ├── mutari.h         # Header pentru funcțiile de mutare

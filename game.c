@@ -357,7 +357,6 @@ void salveazaJocPGN(const GameState *gs, const char *filename)
     }
 
     // SCRIE HEADER-UL PGN
-
     fprintf(file, "[Event \"%s\"]\n", gs->pgn.event);
     fprintf(file, "[Site \"%s\"]\n", gs->pgn.site);
     fprintf(file, "[Date \"%s\"]\n", gs->pgn.date);
@@ -383,32 +382,6 @@ void afiseazaHeaderPGN(PGN *pgn)
     printf("[Result \"%s\"]\n", pgn->result);
     printf("\n"); // Linie goală după header
 }
-
-// char moves[1000][10];
-// int move_count = 0;
-// void mutari_pgn(const char *filename)
-// {
-//     FILE *f = fopen(filename, "r");
-//     if (!f)
-//     {
-//         perror("Eroare deschidere fișier");
-//         return;
-//     }
-
-//     char word[20];
-//     while (fscanf(f, "%s", word) == 1)
-//     {
-//         // Ignoră numerotări și taguri
-//         if (strchr(word, '.') || word[0] == '[' || word[0] == '{')
-//             continue;
-//         if (move_count < 1000)
-//         {
-//             strncpy(moves[move_count++], word, 9);
-//         }
-//     }
-
-//     fclose(f);
-// }
 
 void inchideJoc()
 {

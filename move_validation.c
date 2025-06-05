@@ -123,6 +123,42 @@ int existaMutareLegala(GameState *gs)
     return 0;
 }
 
+void salveazaIstoricMutari(GameState *gs, int x1, int y1, int x2, int y2)
+{
+    int x1_t, y1_t, x2_t, y2_t;
+    transformareInversa(&x1, &y1, &x2, &y2, &x1_t, &y1_t, &x2_t, &y2_t, gs->culoare_ai);
+    switch (toupper(gs->tabla[x1][y1]))
+    {
+    case 'P':
+        gs->pgn.history[gs->pgn.historyCount][0] = '\0';
+        break;
+    case 'C':
+        gs->pgn.history[gs->pgn.historyCount][0] = 'N';
+        break;
+    case 'N':
+        gs->pgn.history[gs->pgn.historyCount][0] = 'B';
+        break;
+    case 'T':
+        gs->pgn.history[gs->pgn.historyCount][0] = 'R';
+        break;
+    case 'D':
+        gs->pgn.history[gs->pgn.historyCount][0] = 'Q';
+        break;
+    case 'R':
+        gs->pgn.history[gs->pgn.historyCount][0] = 'K';
+        break;
+
+    default:
+        break;
+    }
+    gs->pgn.history[gs->pgn.historyCount][1] = y1_t;
+    gs->pgn.history[gs->pgn.historyCount][2] = x1_t;
+    gs->pgn.history[gs->pgn.historyCount][3] = y2_t;
+    gs->pgn.history[gs->pgn.historyCount][4] = x2_t;
+    gs->pgn.history[gs->pgn.historyCount][5] = '\0'; // Asigură terminarea șirului
+    gs->pgn.historyCount++;
+}
+
 void executa_mutare(int x1, int y1, int x2, int y2, GameState *gs)
 {
     // Memorare informații pentru en passant și rocadă
@@ -261,42 +297,7 @@ void executa_mutare(int x1, int y1, int x2, int y2, GameState *gs)
             gs->tabla[x2][y2] = tolower(promo);
         }
     }
-}
-
-void salveazaIstoricMutari(GameState *gs, int x1, int y1, int x2, int y2)
-{
-    int x1_t, y1_t, x2_t, y2_t;
-    transformareInversa(&x1, &y1, &x2, &y2, &x1_t, &y1_t, &x2_t, &y2_t, gs->culoare_ai);
-    switch (toupper(gs->tabla[x1][y1]))
-    {
-    case 'P':
-        gs->pgn.history[gs->pgn.historyCount][0] = '\0';
-        break;
-    case 'C':
-        gs->pgn.history[gs->pgn.historyCount][0] = 'N';
-        break;
-    case 'N':
-        gs->pgn.history[gs->pgn.historyCount][0] = 'B';
-        break;
-    case 'T':
-        gs->pgn.history[gs->pgn.historyCount][0] = 'R';
-        break;
-    case 'D':
-        gs->pgn.history[gs->pgn.historyCount][0] = 'Q';
-        break;
-    case 'R':
-        gs->pgn.history[gs->pgn.historyCount][0] = 'K';
-        break;
-
-    default:
-        break;
-    }
-    gs->pgn.history[gs->pgn.historyCount][1] = y1_t;
-    gs->pgn.history[gs->pgn.historyCount][2] = x1_t;
-    gs->pgn.history[gs->pgn.historyCount][3] = y2_t;
-    gs->pgn.history[gs->pgn.historyCount][4] = x2_t;
-    gs->pgn.history[gs->pgn.historyCount][5] = '\0'; // Asigură terminarea șirului
-    gs->pgn.historyCount++;
+    salveazaIstoricMutari(gs, x1, y1, x2, y2);
 }
 
 int mutareIeseDinSah(int x1, int y1, int x2, int y2, GameState *gs)
