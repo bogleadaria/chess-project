@@ -82,14 +82,16 @@ int existaMutareLegala(GameState *gs) {
     for (int x1 = 0; x1 < 8; x1++)
         for (int y1 = 0; y1 < 8; y1++)
             if ((gs->currentPlayer == 0 && isupper(gs->tabla[x1][y1])) ||
-                (gs->currentPlayer == 1 && islower(gs->tabla[x1][y1]))){
+                (gs->currentPlayer == 1 && islower(gs->tabla[x1][y1])))
                 for (int x2 = 0; x2 < 8; x2++)
-                    for (int y2 = 0; y2 < 8; y2++){
-                        if (validareMiscare(x1, y1, x2, y2, gs) == 1)
-                            return 1;
-                }
-            }
-    return 0;
+                    for (int y2 = 0; y2 < 8; y2++)
+                        if (validareMiscare(x1, y1, x2, y2, gs)) {
+                            GameState copie = *gs;
+                            executa_mutare(x1, y1, x2, y2, &copie);
+                            if (!isInCheck(&copie, gs->currentPlayer))
+                                return 1; // există cel puțin o mutare legală
+                        }
+    return 0; // niciuna nu scoate regele din șah
 }
 
 void executa_mutare(int x1, int y1, int x2, int y2, GameState *gs)

@@ -89,6 +89,12 @@ void drawButton(SDL_Renderer* renderer, TTF_Font* font, const char* text, int x,
 int mouseInRect(int mx, int my, int x, int y, int w, int h) {
     return mx >= x && mx <= x+w && my >= y && my <= y+h;
 }
+// Draws a button and returns 1 if clicked, 0 otherwise
+int drawButtonAndCheck(SDL_Renderer* renderer, TTF_Font* font, const char* text, int x, int y, int w, int h, int mx, int my, int mouseDown) {
+    int hovered = mx >= x && mx <= x+w && my >= y && my <= y+h;
+    drawButton(renderer, font, text, x, y, w, h, hovered);
+    return hovered && mouseDown;
+}
 
 // --- Graphical menu ---
 void show_menu_and_start_game() {
@@ -318,18 +324,70 @@ void visual(int mode, int color) {
 
         // Draw end message if game is over
         if (gameover && end_message[0]) {
-            TTF_Font* font = TTF_OpenFont("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 36);
-            SDL_Color color = {255, 0, 0};
-            SDL_Surface* surface = TTF_RenderUTF8_Blended(font, end_message, color);
-            SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
-            int tw, th;
-            SDL_QueryTexture(texture, NULL, NULL, &tw, &th);
-            SDL_Rect dst = { (SCREEN_WIDTH-tw)/2, (SCREEN_HEIGHT-th)/2, tw, th };
-            SDL_RenderCopy(renderer, texture, NULL, &dst);
-            SDL_FreeSurface(surface);
-            SDL_DestroyTexture(texture);
-            TTF_CloseFont(font);
+    int to_menu = 0, quit = 0;
+    int mx = -1, my = -1, mouseDown = 0;
+    TTF_Font* font = TTF_OpenFont("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 36);
+
+    while (!to_menu && !quit) {
+        SDL_Event e;
+        mouseDown = 0;
+        while (SDL_PollEvent(&e)) {
+            if (e.type == SDL_QUIT) quit = 1;
+            if (e.type == SDL_MOUSEMOTION) {
+                mx = e.motion.x;
+                my = e.motion.y;
+            }
+            if (e.type == SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_LEFT) {
+                mouseDown = 1;
+            }
         }
+
+        SDL_SetRenderDrawColor(renderer, 100, 100, 100, 255);
+        SDL_RenderClear(renderer);
+        drawChessboard(renderer, flip);
+        drawAllPieces(renderer, gs.tabla, piece_textures, -1, -1, 0, flip);
+
+        // Draw end message
+        SDL_Color color = {255, 0, 0};
+        SDL_Surface* surface = TTF_RenderUTF8_Blended(font, end_message, color);
+        SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+        int tw, th;
+        SDL_QueryTexture(texture, NULL, NULL, &tw, &th);
+        SDL_Rect dst = { (SCREEN_WIDTH-tw)/2, 100, tw, th };
+        SDL_RenderCopy(renderer, texture, NULL, &dst);
+        SDL_FreeSurface(surface);
+        SDL_DestroyTexture(texture);
+
+        // Draw buttons
+        int btn_w = 200, btn_h = 60;
+        int btn_x = (SCREEN_WIDTH-btn_w)/2;
+        int btn_y1 = 300, btn_y2 = 400;
+        if (drawButtonAndCheck(renderer, font, "Menu", btn_x, btn_y1, btn_w, btn_h, mx, my, mouseDown)) to_menu = 1;
+        if (drawButtonAndCheck(renderer, font, "Exit", btn_x, btn_y2, btn_w, btn_h, mx, my, mouseDown)) quit = 1;
+
+        SDL_RenderPresent(renderer);
+        SDL_Delay(16);
+    }
+    TTF_CloseFont(font);
+
+    if (to_menu) {
+    // Clean up everything before going to menu
+    for (int i = 0; i < 12; i++) {
+        if (piece_textures[i]) SDL_DestroyTexture(piece_textures[i]);
+    }
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    IMG_Quit();
+    SDL_Quit();
+
+    // Go to menu (restart program)
+    show_menu_and_start_game();
+    // After returning from menu, exit this game instance
+    return;
+}
+    // If quit, just fall through and cleanup
+    break;
+}
 
         SDL_RenderPresent(renderer);
         SDL_Delay(16);
