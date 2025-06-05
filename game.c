@@ -6,6 +6,7 @@
 
 #include "game.h"
 #include "move_validation.h"
+#include "ai.h"
 
 GameState initializeGame()
 {
@@ -26,8 +27,37 @@ GameState initializeGame()
         .canBlackCastleQueenside = 1,
         .enPassantTarget = {-1, -1},
         .halfmoveClock = 0,
-        .fullmoveNumber = 1};
+        .fullmoveNumber = 1,
+        .isPGN = 0,
+        .pgn = initializarePGN()};
     return gs;
+}
+
+PGN initializarePGN()
+{
+    PGN pgn = {
+        .event = "",
+        .site = "",
+        .date = "",
+        .round = 0,
+        .white = "",
+        .black = "",
+        .result = "*",
+        .historyCount = 0}; 
+    return pgn;
+}
+
+void golesteFisierMiscari()
+{
+    FILE *f = fopen("mutari.txt", "w");
+    if (f != NULL)
+    {
+        fclose(f); // Fișierul este acum gol
+    }
+    else
+    {
+        printf("Eroare: nu am putut deschide miscari.txt pentru golire.\n");
+    }
 }
 
 void printTabla(char tabla[8][8], bool culoare_ai)
@@ -66,10 +96,13 @@ void printTabla(char tabla[8][8], bool culoare_ai)
 
 int isSquareAttacked(GameState *gs, int x, int y, int attackerPlayer)
 {
-    // Verifică atacurile pionilor
-    int pionDir = (attackerPlayer == 0) ? -1 : 1;
-    if ((x - pionDir >= 0 && x - pionDir < 8 && y - 1 >= 0 && gs->tabla[x - pionDir][y - 1] == (attackerPlayer ? 'p' : 'P')) ||
-        (x - pionDir >= 0 && x - pionDir < 8 && y + 1 < 8 && gs->tabla[x - pionDir][y + 1] == (attackerPlayer ? 'p' : 'P')))
+    if (x < 0 || x >= 8 || y < 0 || y >= 8)
+    {
+        return 0;
+    }
+    int pionDir = (attackerPlayer == 0) ? -1 : 1; // Alb: -1 (sus), Negru: 1 (jos)
+    if ((x + pionDir >= 0 && x + pionDir < 8 && y - 1 >= 0 && gs->tabla[x + pionDir][y - 1] == (attackerPlayer ? 'p' : 'P')) ||
+        (x + pionDir >= 0 && x + pionDir < 8 && y + 1 < 8 && gs->tabla[x + pionDir][y + 1] == (attackerPlayer ? 'p' : 'P')))
     {
         return 1;
     }
@@ -158,19 +191,24 @@ int isSquareAttacked(GameState *gs, int x, int y, int attackerPlayer)
 
 int isInCheck(GameState *gs, int player)
 {
-    int rege_x, rege_y;
+    int rege_x = -1, rege_y = -1;
     char rege = (player == 0) ? 'R' : 'r';
-
-    // Găsește regele
+    // Caută regele pe tablă
     for (int i = 0; i < 8; i++)
+    {
         for (int j = 0; j < 8; j++)
+        {
             if (gs->tabla[i][j] == rege)
             {
                 rege_x = i;
                 rege_y = j;
+                break;
             }
+        }
+        if (rege_x != -1)
+            break;
+    }
 
-    // Verifică atacurile
     return isSquareAttacked(gs, rege_x, rege_y, !player);
 }
 
@@ -191,7 +229,7 @@ int isCheckmate(GameState *gs)
     return 1;
 }
 
-void salveazaJoc(const GameState *gs, const char *filename)
+void salveazaJocFEN(const GameState *gs, const char *filename)
 {
     FILE *file = fopen(filename, "w");
     if (!file)
@@ -199,7 +237,6 @@ void salveazaJoc(const GameState *gs, const char *filename)
         printf("Eroare la deschiderea fișierului pentru salvare!\n");
         return;
     }
-
     // Scrie tabla de șah
     for (int i = 0; i < 8; i++)
     {
@@ -303,8 +340,71 @@ void salveazaJoc(const GameState *gs, const char *filename)
     fprintf(file, "%d\n", gs->fullmoveNumber);
 
     fclose(file);
-    printf("Jocul a fost salvat în fișierul '%s'.\n", filename);
+    printf("Jocul a fost salvat în fișierul '%s'.fen\n", filename);
 }
+
+void salveazaJocPGN(const GameState *gs, const char *filename)
+{
+    FILE *file = fopen(filename, "w");
+    if (!file)
+    {
+        printf("Eroare la deschiderea fișierului pentru salvare!\n");
+        return;
+    }
+
+    // SCRIE HEADER-UL PGN
+
+    fprintf(file, "[Event \"%s\"]\n", gs->pgn.event);
+    fprintf(file, "[Site \"%s\"]\n", gs->pgn.site);
+    fprintf(file, "[Date \"%s\"]\n", gs->pgn.date);
+    fprintf(file, "[Round \"%d\"]\n", gs->pgn.round);
+    fprintf(file, "[White \"%s\"]\n", gs->pgn.white);
+    fprintf(file, "[Black \"%s\"]\n", gs->pgn.black);
+    fprintf(file, "[Result \"%s\"]\n", gs->pgn.result);
+    fprintf(file, "\n");
+
+    fclose(file);
+    printf("Jocul a fost salvat în fișierul '%s'.pgn\n", filename);
+    // SCRIE ISTORICUL MUTARILOR
+}
+
+void afiseazaHeaderPGN(PGN *pgn)
+{
+    printf("[Event \"%s\"]\n", pgn->event);
+    printf("[Site \"%s\"]\n", pgn->site);
+    printf("[Date \"%s\"]\n", pgn->date);
+    printf("[Round \"%d\"]\n", pgn->round);
+    printf("[White \"%s\"]\n", pgn->white);
+    printf("[Black \"%s\"]\n", pgn->black);
+    printf("[Result \"%s\"]\n", pgn->result);
+    printf("\n"); // Linie goală după header
+}
+
+// char moves[1000][10];
+// int move_count = 0;
+// void mutari_pgn(const char *filename)
+// {
+//     FILE *f = fopen(filename, "r");
+//     if (!f)
+//     {
+//         perror("Eroare deschidere fișier");
+//         return;
+//     }
+
+//     char word[20];
+//     while (fscanf(f, "%s", word) == 1)
+//     {
+//         // Ignoră numerotări și taguri
+//         if (strchr(word, '.') || word[0] == '[' || word[0] == '{')
+//             continue;
+//         if (move_count < 1000)
+//         {
+//             strncpy(moves[move_count++], word, 9);
+//         }
+//     }
+
+//     fclose(f);
+// }
 
 void inchideJoc()
 {
@@ -314,9 +414,7 @@ void inchideJoc()
     exit(0); // Termină programul cu codul de succes 0
 }
 
-// TODO: add parameter to load from fen notation (board state)
-//       or board notation (PGN File)
-int reincepereJoc(GameState *gs, const char *filename, bool type)
+int reincepereJoc(GameState *gs, const char *filename, PGN *pgn, bool type)
 {
     if (type == 0)
     {
@@ -482,19 +580,8 @@ int reincepereJoc(GameState *gs, const char *filename, bool type)
             return 0;
         }
 
-        char linie[256];
-        // int mutari_incep = 0;
-        while (fgets(linie, sizeof(linie), file))
-        {
-            if (linie[0] == '[')
-            {
-                ;
-            }
-            else if (1)
-            {
-                ;
-            }
-        }
+        afiseazaHeaderPGN(pgn);
+
         fclose(file);
         printf("Joc încărcat cu succes din '%s'!\n", filename);
         return 1;
