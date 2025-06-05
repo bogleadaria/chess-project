@@ -246,8 +246,6 @@ Move findBestMove(GameState *gs, bool culoare_ai, Move avoid)
     int jucator = gs->currentPlayer;
 
     // Generate all moves
-    MoveList lista;
-    initMoveList(&lista);
     genereazaToateMutarilePion(gs, &lista, jucator);
     genereazaToateMutarileCal(gs, &lista, jucator);
     genereazaToateMutarileNebun(gs, &lista, jucator);
@@ -264,7 +262,7 @@ Move findBestMove(GameState *gs, bool culoare_ai, Move avoid)
         {
 
             GameState copie = *gs;
-            Move m = legalMoves[i];
+            Move m = lista.mutari[i];
             executa_mutare(m.x1, m.y1, m.x2, m.y2, &copie);
 
             float scor = minimax(&copie, DEPTH - 1, -INF, INF, 0); // maximizingPlayer=0 pentru adversar (negru)
@@ -284,7 +282,7 @@ Move findBestMove(GameState *gs, bool culoare_ai, Move avoid)
         {
 
             GameState copie = *gs;
-            Move m = legalMoves[i];
+            Move m = lista.mutari[i];
             executa_mutare(m.x1, m.y1, m.x2, m.y2, &copie);
 
             float scor = minimax(&copie, DEPTH - 1, -INF, INF, 1); // maximizingPlayer=1 pentru adversar (alb)
@@ -298,28 +296,3 @@ Move findBestMove(GameState *gs, bool culoare_ai, Move avoid)
     }
     return bestMove;
 }
-
-// void jocAIVsAI(GameState *gs) {
-//     while (1) {
-//         // Afișează tabla
-//         printTabla(gs->tabla, gs->culoare_ai);
-
-//         // Verifică dacă jocul s-a terminat
-//         if (isCheckmate(gs)) {
-//             printf("Șah mat! %s câștigă!\n", gs->currentPlayer ? "Alb" : "Negru");
-//             break;
-//         }
-//         if (isStalemate(gs)) {
-//             printf("Pat! Partida s-a terminat la egalitate.\n");
-//             break;
-//         }
-
-//         // AI-ul gândește și execută mutarea
-//         printf("AI (%s) gândește...\n", gs->currentPlayer ? "Alb" : "Negru");
-//         Move bestMove = findBestMove(gs, gs->culoare_ai);
-//         executa_mutare(bestMove.x1, bestMove.y1, bestMove.x2, bestMove.y2, gs);
-
-//         // Schimbă jucătorul curent
-//         gs->currentPlayer = !gs->currentPlayer;
-//     }
-// }

@@ -15,7 +15,6 @@ void inverseaza_sir(float *sir);
 void initializeaza_tabele_negre();
 float minimax(GameState *gs, int depth, float alpha, float beta, int maximizingPlayer);
 float evaluatePosition(GameState *gs);
-void jocAIVsAI(GameState *gs);
 
 #endif
 
