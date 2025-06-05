@@ -209,6 +209,11 @@ int isInCheck(GameState *gs, int player)
             break;
     }
 
+    // Dacă nu există rege, considerăm că nu e în șah (sau e deja mat)
+    if (rege_x == -1 || rege_y == -1)
+        return 0;
+
+    // Verifică atacurile
     return isSquareAttacked(gs, rege_x, rege_y, !player);
 }
 
@@ -217,17 +222,22 @@ int isCheckmate(GameState *gs)
     if (!isInCheck(gs, gs->currentPlayer))
         return 0;
 
-    // Generează toate mutările posibile
+    // Generează toate mutările posibile și verifică dacă vreo mutare scoate regele din șah
     for (int x1 = 0; x1 < 8; x1++)
         for (int y1 = 0; y1 < 8; y1++)
             if ((gs->currentPlayer == 0 && isupper(gs->tabla[x1][y1])) ||
                 (gs->currentPlayer == 1 && islower(gs->tabla[x1][y1])))
                 for (int x2 = 0; x2 < 8; x2++)
                     for (int y2 = 0; y2 < 8; y2++)
-                        if (validareMiscare(x1, y1, x2, y2, gs))
-                            return 0;
+                        if (validareMiscare(x1, y1, x2, y2, gs)) {
+                            GameState copie = *gs;
+                            executa_mutare(x1, y1, x2, y2, &copie);
+                            if (!isInCheck(&copie, gs->currentPlayer))
+                                return 0;
+                        }
     return 1;
 }
+
 
 void salveazaJocFEN(const GameState *gs, const char *filename)
 {
