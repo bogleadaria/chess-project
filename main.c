@@ -51,8 +51,6 @@ int main()
     strncpy(gs.pgn.date, date, sizeof(gs.pgn.date) - 1);
     gs.pgn.date[sizeof(gs.pgn.date) - 1] = '\0';
 
-    int round = 0;
-
     char(white[250]);
     printf("White (nume jucător): ");
     fgets(white, sizeof(white), stdin);
@@ -657,6 +655,7 @@ int main()
             gs.currentPlayer = !gs.currentPlayer;
         }
     }
+
     return 0;
 }
 
