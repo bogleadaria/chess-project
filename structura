@@ -3,13 +3,17 @@ project/
 ├── game.c               # Funcții legate de starea jocului (tabla, afișare etc.)
 ├── game.h               # Header pentru game.c
 ├── move_validation.c    # Validare mutări pentru toate piesele
-├── move_validation.h    # Header pentru move_validation.c
+├── move_validation.h 
+├── ai.c                 # Funcții pentru AI (dacă este cazul)
+├── ai.h                 # Header pentru ai.c
 ├── pieces/
 │   ├── pion.c           # Funcții pentru mutările pionului
-│   ├── cal.c         # Funcții pentru mutările calului
-│   ├── nebun.c         # Funcții pentru mutările nebunului
+│   ├── cal.c            # Funcții pentru mutările calului
+│   ├── nebun.c          # Funcții pentru mutările nebunului
 │   ├── turn.c           # Funcții pentru mutările turnului
-│   ├── dama/regina.c          # Funcții pentru mutările damei
+│   ├── dama/regina.c    # Funcții pentru mutările damei
 │   ├── rege.c           # Funcții pentru mutările regelui
+|   ├── mutari.c         # Funcții comune pentru mutări
+│   ├── mutari.h         # Header pentru funcțiile de mutare
 │   └── pieces.h         # Header comun pentru toate piesele
 └──
