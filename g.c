@@ -6,9 +6,11 @@
 #include "move_validation.h"
 #include "ai.h"
 
-#define SCREEN_WIDTH 800
+#define SCREEN_WIDTH 1100
 #define SCREEN_HEIGHT 800
-#define SQUARE_SIZE (SCREEN_WIDTH / 8)
+#define BOARD_WIDTH 800
+#define PANEL_WIDTH (SCREEN_WIDTH - BOARD_WIDTH)
+#define SQUARE_SIZE (BOARD_WIDTH / 8)
 #define MENU_WIDTH 400
 #define MENU_HEIGHT 400
 #define BUTTON_WIDTH 300
@@ -89,11 +91,53 @@ void drawButton(SDL_Renderer* renderer, TTF_Font* font, const char* text, int x,
 int mouseInRect(int mx, int my, int x, int y, int w, int h) {
     return mx >= x && mx <= x+w && my >= y && my <= y+h;
 }
-// Draws a button and returns 1 if clicked, 0 otherwise
-int drawButtonAndCheck(SDL_Renderer* renderer, TTF_Font* font, const char* text, int x, int y, int w, int h, int mx, int my, int mouseDown) {
-    int hovered = mx >= x && mx <= x+w && my >= y && my <= y+h;
-    drawButton(renderer, font, text, x, y, w, h, hovered);
-    return hovered && mouseDown;
+
+// Draws the right panel, always visible
+void drawSidePanel(SDL_Renderer* renderer, TTF_Font* font, const char* end_message, int gameover, int mx, int my, int mouseDown, int* to_menu, int* quit) {
+    SDL_Rect panel = {BOARD_WIDTH, 0, PANEL_WIDTH, SCREEN_HEIGHT};
+    SDL_SetRenderDrawColor(renderer, 220, 220, 220, 255);
+    SDL_RenderFillRect(renderer, &panel);
+
+    // End message at the top if game is over
+    if (gameover && end_message && end_message[0]) {
+        SDL_Color color = {255, 0, 0};
+        SDL_Surface* surface = TTF_RenderUTF8_Blended(font, end_message, color);
+        SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+        int tw, th;
+        SDL_QueryTexture(texture, NULL, NULL, &tw, &th);
+        SDL_Rect dst = {BOARD_WIDTH + (PANEL_WIDTH-tw)/2, 40, tw, th};
+        SDL_RenderCopy(renderer, texture, NULL, &dst);
+        SDL_FreeSurface(surface);
+        SDL_DestroyTexture(texture);
+    }
+
+    // Buttons (always clickable)
+    int btn_w = PANEL_WIDTH - 40, btn_h = 50;
+    int btn_x = BOARD_WIDTH + 20;
+    int btn_y1 = 120, btn_y2 = 190;
+    int menu_hover = mouseInRect(mx, my, btn_x, btn_y1, btn_w, btn_h);
+    int exit_hover = mouseInRect(mx, my, btn_x, btn_y2, btn_w, btn_h);
+
+    drawButton(renderer, font, "Menu", btn_x, btn_y1, btn_w, btn_h, menu_hover);
+    drawButton(renderer, font, "Exit", btn_x, btn_y2, btn_w, btn_h, exit_hover);
+
+    if (menu_hover && mouseDown) *to_menu = 1;
+    if (exit_hover && mouseDown) *quit = 1;
+
+    // PGN/Replay area (always visible)
+    SDL_Rect pgn_area = {BOARD_WIDTH + 20, 270, btn_w, 500};
+    SDL_SetRenderDrawColor(renderer, 200, 200, 240, 255);
+    SDL_RenderFillRect(renderer, &pgn_area);
+
+    SDL_Color pgn_color = {0, 0, 80};
+    SDL_Surface* pgn_surface = TTF_RenderUTF8_Blended(font, "PGN Replay (coming soon)", pgn_color);
+    SDL_Texture* pgn_texture = SDL_CreateTextureFromSurface(renderer, pgn_surface);
+    int pgn_tw, pgn_th;
+    SDL_QueryTexture(pgn_texture, NULL, NULL, &pgn_tw, &pgn_th);
+    SDL_Rect pgn_dst = {BOARD_WIDTH + 30, 290, pgn_tw, pgn_th};
+    SDL_RenderCopy(renderer, pgn_texture, NULL, &pgn_dst);
+    SDL_FreeSurface(pgn_surface);
+    SDL_DestroyTexture(pgn_texture);
 }
 
 // --- Graphical menu ---
@@ -180,10 +224,11 @@ void show_menu_and_start_game() {
     }
 }
 
-// --- Visual chess game with board flipping and AI ---
+
 void visual(int mode, int color) {
     SDL_Init(SDL_INIT_VIDEO);
     IMG_Init(IMG_INIT_PNG);
+    TTF_Init();
 
     SDL_Window* window = SDL_CreateWindow("Chess",
                                           SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
@@ -223,7 +268,11 @@ void visual(int mode, int color) {
     int gameover = 0;
     char end_message[128] = "";
 
-    while (running) {
+    TTF_Font* font = TTF_OpenFont("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 28);
+
+    int to_menu = 0, quit = 0;
+
+    while (running && !to_menu && !quit) {
         // --- AI MOVE LOGIC ---
         if (!gameover && (
             (mode == 1 && gs.currentPlayer == gs.culoare_ai) // Human vs AI, AI's turn
@@ -237,8 +286,10 @@ void visual(int mode, int color) {
             }
         }
 
+        int mx = -1, my = -1, mouseDown = 0;
+
         while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) running = 0;
+            if (event.type == SDL_QUIT) quit = 1;
 
             int human_turn = (mode == 2) || (mode == 1 && gs.currentPlayer != gs.culoare_ai);
 
@@ -247,17 +298,19 @@ void visual(int mode, int color) {
                 if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) {
                     int row = event.button.y / SQUARE_SIZE;
                     int col = event.button.x / SQUARE_SIZE;
-                    int board_row = flip ? 7 - row : row;
-                    int board_col = flip ? 7 - col : col;
-                    char piece = gs.tabla[board_row][board_col];
-                    if (piece != ' ' &&
-                        ((gs.currentPlayer == 0 && piece >= 'A' && piece <= 'Z') ||
-                         (gs.currentPlayer == 1 && piece >= 'a' && piece <= 'z'))) {
-                        dragging = 1;
-                        drag_x = board_row;
-                        drag_y = board_col;
-                        mouse_x = event.button.x;
-                        mouse_y = event.button.y;
+                    if (col < 8) { // Only allow drag from board, not panel
+                        int board_row = flip ? 7 - row : row;
+                        int board_col = flip ? 7 - col : col;
+                        char piece = gs.tabla[board_row][board_col];
+                        if (piece != ' ' &&
+                            ((gs.currentPlayer == 0 && piece >= 'A' && piece <= 'Z') ||
+                             (gs.currentPlayer == 1 && piece >= 'a' && piece <= 'z'))) {
+                            dragging = 1;
+                            drag_x = board_row;
+                            drag_y = board_col;
+                            mouse_x = event.button.x;
+                            mouse_y = event.button.y;
+                        }
                     }
                 }
                 // Dragging motion
@@ -269,23 +322,36 @@ void visual(int mode, int color) {
                 if (event.type == SDL_MOUSEBUTTONUP && event.button.button == SDL_BUTTON_LEFT && dragging) {
                     int to_row = event.button.y / SQUARE_SIZE;
                     int to_col = event.button.x / SQUARE_SIZE;
-                    int board_to_row = flip ? 7 - to_row : to_row;
-                    int board_to_col = flip ? 7 - to_col : to_col;
-                    // Only allow moves that get out of check
-                    if (validareMiscare(drag_x, drag_y, board_to_row, board_to_col, &gs)) {
-                        // Simulate the move
-                        GameState gs_copy = gs;
-                        executa_mutare(drag_x, drag_y, board_to_row, board_to_col, &gs_copy);
-                        if (!isInCheck(&gs_copy, gs.currentPlayer)) {
-                            executa_mutare(drag_x, drag_y, board_to_row, board_to_col, &gs);
-                            gs.currentPlayer = !gs.currentPlayer;
+                    if (to_col < 8) { // Only allow drop on board
+                        int board_to_row = flip ? 7 - to_row : to_row;
+                        int board_to_col = flip ? 7 - to_col : to_col;
+                        // Only allow moves that get out of check
+                        if (validareMiscare(drag_x, drag_y, board_to_row, board_to_col, &gs)) {
+                            // Simulate the move
+                            GameState gs_copy = gs;
+                            executa_mutare(drag_x, drag_y, board_to_row, board_to_col, &gs_copy);
+                            if (!isInCheck(&gs_copy, gs.currentPlayer)) {
+                                executa_mutare(drag_x, drag_y, board_to_row, board_to_col, &gs);
+                                gs.currentPlayer = !gs.currentPlayer;
+                            }
+                            // else: illegal move, do nothing
                         }
-                        // else: illegal move, do nothing
                     }
                     dragging = 0;
                     drag_x = drag_y = -1;
                 }
             }
+
+            // Always track mouse for panel buttons
+            if (event.type == SDL_MOUSEMOTION) {
+    mx = event.motion.x;
+    my = event.motion.y;
+}
+if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) {
+    mx = event.button.x;
+    my = event.button.y;
+    mouseDown = 1;
+}
         }
 
         // --- ENDGAME CHECKS ---
@@ -322,82 +388,24 @@ void visual(int mode, int color) {
             }
         }
 
-        // Draw end message if game is over
-        if (gameover && end_message[0]) {
-    int to_menu = 0, quit = 0;
-    int mx = -1, my = -1, mouseDown = 0;
-    TTF_Font* font = TTF_OpenFont("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 36);
-
-    while (!to_menu && !quit) {
-        SDL_Event e;
-        mouseDown = 0;
-        while (SDL_PollEvent(&e)) {
-            if (e.type == SDL_QUIT) quit = 1;
-            if (e.type == SDL_MOUSEMOTION) {
-                mx = e.motion.x;
-                my = e.motion.y;
-            }
-            if (e.type == SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_LEFT) {
-                mouseDown = 1;
-            }
-        }
-
-        SDL_SetRenderDrawColor(renderer, 100, 100, 100, 255);
-        SDL_RenderClear(renderer);
-        drawChessboard(renderer, flip);
-        drawAllPieces(renderer, gs.tabla, piece_textures, -1, -1, 0, flip);
-
-        // Draw end message
-        SDL_Color color = {255, 0, 0};
-        SDL_Surface* surface = TTF_RenderUTF8_Blended(font, end_message, color);
-        SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
-        int tw, th;
-        SDL_QueryTexture(texture, NULL, NULL, &tw, &th);
-        SDL_Rect dst = { (SCREEN_WIDTH-tw)/2, 100, tw, th };
-        SDL_RenderCopy(renderer, texture, NULL, &dst);
-        SDL_FreeSurface(surface);
-        SDL_DestroyTexture(texture);
-
-        // Draw buttons
-        int btn_w = 200, btn_h = 60;
-        int btn_x = (SCREEN_WIDTH-btn_w)/2;
-        int btn_y1 = 300, btn_y2 = 400;
-        if (drawButtonAndCheck(renderer, font, "Menu", btn_x, btn_y1, btn_w, btn_h, mx, my, mouseDown)) to_menu = 1;
-        if (drawButtonAndCheck(renderer, font, "Exit", btn_x, btn_y2, btn_w, btn_h, mx, my, mouseDown)) quit = 1;
+        // Always draw the side panel (buttons only active if gameover)
+        drawSidePanel(renderer, font, end_message, gameover, mx, my, mouseDown, &to_menu, &quit);
 
         SDL_RenderPresent(renderer);
         SDL_Delay(16);
     }
+
     TTF_CloseFont(font);
 
+    for (int i = 0; i < 12; i++) {
+        if (piece_textures[i]) SDL_DestroyTexture(piece_textures[i]);
+    }
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    IMG_Quit();
+    SDL_Quit();
+
     if (to_menu) {
-    // Clean up everything before going to menu
-    for (int i = 0; i < 12; i++) {
-        if (piece_textures[i]) SDL_DestroyTexture(piece_textures[i]);
+        show_menu_and_start_game();
     }
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    IMG_Quit();
-    SDL_Quit();
-
-    // Go to menu (restart program)
-    show_menu_and_start_game();
-    // After returning from menu, exit this game instance
-    return;
-}
-    // If quit, just fall through and cleanup
-    break;
-}
-
-        SDL_RenderPresent(renderer);
-        SDL_Delay(16);
-    }
-
-    for (int i = 0; i < 12; i++) {
-        if (piece_textures[i]) SDL_DestroyTexture(piece_textures[i]);
-    }
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    IMG_Quit();
-    SDL_Quit();
 }
