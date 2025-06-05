@@ -26,54 +26,44 @@ int main()
     // PGN pgn;
 
     gs = initializeGame();
+    initializeaza_tabele_negre();
 
     char event[250];
-    printf("Event ");
+    printf("Event: ");
     fgets(event, sizeof(event), stdin);
     event[strcspn(event, "\n")] = '\0'; // Elimină newline-ul
-    printf("Event: %s\n", gs.pgn.event);
     strncpy(gs.pgn.event, event, sizeof(gs.pgn.event) - 1);
     gs.pgn.event[sizeof(gs.pgn.event) - 1] = '\0';
-    printf("Event: %s\n", gs.pgn.event);
 
     char site[250];
-    printf("Site ");
+    printf("Site: ");
     fgets(site, sizeof(site), stdin);
     site[strcspn(site, "\n")] = '\0'; // Elimină newline-ul
-    printf("Site: %s\n", site);
-    printf("Site: %s\n", gs.pgn.site);
     strncpy(gs.pgn.site, site, sizeof(gs.pgn.site) - 1);
     gs.pgn.site[sizeof(gs.pgn.site) - 1] = '\0';
-    printf("Site: %s\n", gs.pgn.site);
 
     char date[50];
-    printf("Date ");
+    printf("Date: ");
     fgets(date, sizeof(date), stdin);
     date[strcspn(date, "\n")] = '\0'; // Elimină newline-ul
-    printf("Date: %s\n", gs.pgn.date);
     strncpy(gs.pgn.date, date, sizeof(gs.pgn.date) - 1);
     gs.pgn.date[sizeof(gs.pgn.date) - 1] = '\0';
-    printf("Date: %s\n", gs.pgn.date);
 
     int round = 0;
 
     char(white[250]);
-    printf("White (nume jucător)\n");
+    printf("White (nume jucător): ");
     fgets(white, sizeof(white), stdin);
     white[strcspn(white, "\n")] = '\0'; // Elimină newline-ul
-    printf("White: %s\n", gs.pgn.white);
     strncpy(gs.pgn.white, white, sizeof(gs.pgn.white) - 1);
     gs.pgn.white[sizeof(gs.pgn.white) - 1] = '\0';
-    printf("White: %s\n", gs.pgn.white);
 
     char black[250];
-    printf("Black (nume jucător)\n");
+    printf("Black (nume jucător): ");
     fgets(black, sizeof(black), stdin);
     black[strcspn(black, "\n")] = '\0'; // Elimină newline-ul
-    printf("Black: %s\n", gs.pgn.black);
     strncpy(gs.pgn.black, black, sizeof(gs.pgn.black) - 1);
     gs.pgn.black[sizeof(gs.pgn.black) - 1] = '\0';
-    printf("Black: %s\n", gs.pgn.black);
 
     char result[10] = "*";
 
