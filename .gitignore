@@ -1,2 +1,4 @@
 chess_game
 Makefile
+*.o
+*.exe
