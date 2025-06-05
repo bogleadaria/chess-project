@@ -655,5 +655,6 @@ int main()
             gs.currentPlayer = !gs.currentPlayer;
         }
     }
+
     return 0;
 }
