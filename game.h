@@ -2,7 +2,7 @@
 #define GAME_H
 
 #include <stdbool.h>
-#include <stdbool.h>
+#include <stdio.h>
 
 typedef struct
 {
@@ -15,6 +15,8 @@ typedef struct
     char result[10];
     char history[120][6];
     int historyCount;
+    int Rocada[120]; // 0 = nu, 1 = mică, 2 = mare
+    int Captura[120]; // 0 = nu, 1 = pion, 2 = altceva
 } PGN;
 
 typedef struct
@@ -30,15 +32,13 @@ typedef struct
     int halfmoveClock;
     int fullmoveNumber;
     bool isPGN;
-    int Rocada; // 0 = nu, 1 = mică, 2 = mare
-    int Captura; // 0 = nu, 1 = da
     PGN pgn;
 } GameState;
 
 GameState initializeGame();
 PGN initializarePGN();
 void printTabla(char tabla[8][8], bool culoare_ai);
-void transformareMiscare(char *start, char *finish, int *x1, int *y1, int *x2, int *y2, bool culoare_ai);
+void transformareMiscare(char *start, char *finish, int *x1, int *y1, int *x2, int *y2);
 void executa_mutare(int x1, int y1, int x2, int y2, GameState *gs);
 int isInCheck(GameState *gs, int player);
 int isCheckmate(GameState *gs);
@@ -49,7 +49,7 @@ void salveazaJocFEN(const GameState *gs, const char *filename);
 void salveazaJocPGN(const GameState *gs, const char *filename);
 void inchideJoc();
 int reincepereJoc(GameState *gs, const char *filename, PGN *pgn, bool type);
-void golesteFisierMiscari();
+void scrieIstoricMutari(FILE *file, const GameState *gs, int i);
 void afiseazaHeaderPGN(PGN *pgn);
 
 
