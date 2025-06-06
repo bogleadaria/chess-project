@@ -2,6 +2,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_ttf.h>
+
 #include "game.h"
 #include "move_validation.h"
 #include "ai.h"
@@ -38,6 +39,25 @@ SDL_Texture* loadTexture(const char* path, SDL_Renderer* renderer) {
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_FreeSurface(surface);
     return texture;
+}
+
+void format_pgn_for_panel(const char* pgn_moves, char* out, size_t outlen, int moves_per_line) {
+    out[0] = 0;
+    int move_count = 0;
+    char moves_copy[4096];
+    strncpy(moves_copy, pgn_moves, sizeof(moves_copy)-1);
+    moves_copy[sizeof(moves_copy)-1] = 0;
+    char *token = strtok(moves_copy, " \n\r\t");
+    while (token) {
+        strcat(out, token);
+        strcat(out, " ");
+        move_count++;
+        if (move_count % moves_per_line == 0)
+            strcat(out, "\n");
+        token = strtok(NULL, " \n\r\t");
+        if (strlen(out) > outlen - 64) break; // avoid overflow
+    }
+    out[outlen-1] = 0;
 }
 
 void drawPiece(SDL_Renderer* renderer, int x, int y, char piece, SDL_Texture* textures[12]) {
@@ -107,10 +127,10 @@ void loadPGNText(const char* filename, char* buf, size_t buflen) {
     fclose(f);
 }
 
-// --- Draws the right panel, always visible, with extra buttons ---
+// --- Draws the right panel, always visible, with extra buttons and PGN scroll ---
 void drawSidePanel(SDL_Renderer* renderer, TTF_Font* font, const char* end_message, int gameover, int mx, int my, int mouseDown,
                    int* to_menu, int* quit, int* pgn_left, int* pgn_right, int* pgn_save, int* pgn_load,
-                   const char* pgn_moves) {
+                   const char* pgn_moves, int pgn_scroll) {
     SDL_Rect panel = {BOARD_WIDTH, 0, PANEL_WIDTH, SCREEN_HEIGHT};
     SDL_SetRenderDrawColor(renderer, 220, 220, 220, 255);
     SDL_RenderFillRect(renderer, &panel);
@@ -122,16 +142,43 @@ void drawSidePanel(SDL_Renderer* renderer, TTF_Font* font, const char* end_messa
         SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
         int tw, th;
         SDL_QueryTexture(texture, NULL, NULL, &tw, &th);
-        SDL_Rect dst = {BOARD_WIDTH + (PANEL_WIDTH-tw)/2, 40, tw, th};
+        SDL_Rect dst = {BOARD_WIDTH + (PANEL_WIDTH-tw)/2, 20, tw, th};
         SDL_RenderCopy(renderer, texture, NULL, &dst);
         SDL_FreeSurface(surface);
         SDL_DestroyTexture(texture);
     }
 
-    // Main buttons
+    // --- Keyboard shortcut labels (smaller font, at the very top) ---
+    TTF_Font* small_font = TTF_OpenFont("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 18);
+    SDL_Color label_color = {0, 0, 80};
+    const char* labels[] = {
+        "f - Save game (FEN)",
+        "l - Load game (FEN)",
+        "p - Save game (PGN)",
+        "o - Load game (PGN)"
+    };
+    int label_y = 20; // Start higher up
+    for (int i = 0; i < 4; ++i) {
+        SDL_Surface* surf = TTF_RenderUTF8_Blended(small_font, labels[i], label_color);
+        SDL_Texture* tex = SDL_CreateTextureFromSurface(renderer, surf);
+        int tw, th;
+        SDL_QueryTexture(tex, NULL, NULL, &tw, &th);
+        SDL_Rect dst = {BOARD_WIDTH + 40, label_y, tw, th};
+        SDL_RenderCopy(renderer, tex, NULL, &dst);
+        SDL_FreeSurface(surf);
+        SDL_DestroyTexture(tex);
+        label_y += th + 4;
+    }
+    if (small_font) TTF_CloseFont(small_font);
+
+    // Move everything else lower to make space for the shortcut text
+    int offset = label_y + 16; // Add some extra space after shortcuts
+
+    // Main buttons (Menu/Exit)
     int btn_w = PANEL_WIDTH - 40, btn_h = 50;
     int btn_x = BOARD_WIDTH + 20;
-    int btn_y1 = 120, btn_y2 = 190;
+    int btn_y1 = offset;
+    int btn_y2 = btn_y1 + btn_h + 20;
     int menu_hover = mouseInRect(mx, my, btn_x, btn_y1, btn_w, btn_h);
     int exit_hover = mouseInRect(mx, my, btn_x, btn_y2, btn_w, btn_h);
 
@@ -142,41 +189,44 @@ void drawSidePanel(SDL_Renderer* renderer, TTF_Font* font, const char* end_messa
     if (exit_hover && mouseDown) *quit = 1;
 
     // PGN/Replay area
-    SDL_Rect pgn_area = {BOARD_WIDTH + 20, 270, btn_w, 500};
+    int pgn_area_y = btn_y2 + btn_h + 20;
+    SDL_Rect pgn_area = {BOARD_WIDTH + 20, pgn_area_y, btn_w, 500};
     SDL_SetRenderDrawColor(renderer, 200, 200, 240, 255);
     SDL_RenderFillRect(renderer, &pgn_area);
 
-    // PGN navigation and save/load buttons
+    // PGN navigation buttons
     int nav_btn_size = 40;
-    int nav_y = 280;
+    int nav_y = pgn_area_y + 10;
     int nav_x_left = BOARD_WIDTH + 30;
     int nav_x_right = BOARD_WIDTH + PANEL_WIDTH - 30 - nav_btn_size;
-    int nav_x_save = nav_x_left + nav_btn_size + 10;
-    int nav_x_load = nav_x_right - nav_btn_size - 10;
 
     int left_hover = mouseInRect(mx, my, nav_x_left, nav_y, nav_btn_size, nav_btn_size);
     int right_hover = mouseInRect(mx, my, nav_x_right, nav_y, nav_btn_size, nav_btn_size);
-    int save_hover = mouseInRect(mx, my, nav_x_save, nav_y, nav_btn_size, nav_btn_size);
-    int load_hover = mouseInRect(mx, my, nav_x_load, nav_y, nav_btn_size, nav_btn_size);
 
     drawButton(renderer, font, "◀", nav_x_left, nav_y, nav_btn_size, nav_btn_size, left_hover);
     drawButton(renderer, font, "▶", nav_x_right, nav_y, nav_btn_size, nav_btn_size, right_hover);
-    drawButton(renderer, font, "Save", nav_x_save, nav_y, nav_btn_size, nav_btn_size, save_hover);
-    drawButton(renderer, font, "Load", nav_x_load, nav_y, nav_btn_size, nav_btn_size, load_hover);
 
     if (left_hover && mouseDown) *pgn_left = 1;
     if (right_hover && mouseDown) *pgn_right = 1;
-    if (save_hover && mouseDown) *pgn_save = 1;
-    if (load_hover && mouseDown) *pgn_load = 1;
 
-    // Draw PGN moves text
+    // Draw PGN moves text with scrolling
     SDL_Color pgn_color = {0, 0, 80};
     SDL_Surface* pgn_surface = TTF_RenderUTF8_Blended_Wrapped(font, pgn_moves, pgn_color, PANEL_WIDTH - 60);
     SDL_Texture* pgn_texture = SDL_CreateTextureFromSurface(renderer, pgn_surface);
     int pgn_tw, pgn_th;
     SDL_QueryTexture(pgn_texture, NULL, NULL, &pgn_tw, &pgn_th);
-    SDL_Rect pgn_dst = {BOARD_WIDTH + 30, nav_y + nav_btn_size + 10, pgn_tw, pgn_th};
-    SDL_RenderCopy(renderer, pgn_texture, NULL, &pgn_dst);
+
+    int pgn_area_height = 500;
+    if (pgn_th > pgn_area_height && pgn_scroll > pgn_th - pgn_area_height)
+        pgn_scroll = pgn_th - pgn_area_height;
+    if (pgn_th <= pgn_area_height)
+        pgn_scroll = 0;
+
+    SDL_Rect pgn_src = {0, pgn_scroll, pgn_tw, pgn_area_height};
+    SDL_Rect pgn_dst = {BOARD_WIDTH + 30, nav_y + nav_btn_size + 20, pgn_tw, pgn_area_height};
+    SDL_RenderSetClipRect(renderer, &pgn_area);
+    SDL_RenderCopy(renderer, pgn_texture, &pgn_src, &pgn_dst);
+    SDL_RenderSetClipRect(renderer, NULL);
     SDL_FreeSurface(pgn_surface);
     SDL_DestroyTexture(pgn_texture);
 }
@@ -314,15 +364,30 @@ void visual(int mode, int color) {
 
     int to_menu = 0, quit = 0;
 
+    // --- PGN navigation state ---
     char pgn_moves[4096] = "";
     loadPGNText("game.pgn", pgn_moves, sizeof(pgn_moves));
+    int pgn_nav_index = -1; // -1 means not in navigation mode
+    int pgn_total_moves = 0;
+    int pgn_scroll = 0;
+    {
+        char moves_copy[4096];
+        strcpy(moves_copy, pgn_moves);
+        char *token = strtok(moves_copy, " \n\r\t");
+        while (token) {
+            if (strchr(token, '.') == NULL && strcmp(token, "1-0") && strcmp(token, "0-1") && strcmp(token, "1/2-1/2") && strcmp(token, "*")) {
+                pgn_total_moves++;
+            }
+            token = strtok(NULL, " \n\r\t");
+        }
+    }
 
     while (running && !to_menu && !quit) {
         // --- AI MOVE LOGIC ---
         if (!gameover && (
             (mode == 1 && gs.currentPlayer == gs.culoare_ai) // Human vs AI, AI's turn
             || (mode == 3) // AI vs AI, always AI's turn
-        )) {
+        ) && pgn_nav_index == -1) { // Only allow AI to move if not in PGN replay
             SDL_Delay(300);
             Move nimic = { .x1 = -1, .y1 = -1, .x2 = -1, .y2 = -1, .scor = 0.0 };
             Move best = findBestMove(&gs, gs.culoare_ai, nimic);
@@ -340,7 +405,7 @@ void visual(int mode, int color) {
 
             int human_turn = (mode == 2) || (mode == 1 && gs.currentPlayer != gs.culoare_ai);
 
-            if (!gameover && human_turn) {
+            if (!gameover && human_turn && pgn_nav_index == -1) {
                 // Start drag
                 if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) {
                     int row = event.button.y / SQUARE_SIZE;
@@ -376,6 +441,7 @@ void visual(int mode, int color) {
                             if (!mutareIeseDinSah(drag_x, drag_y, board_to_row, board_to_col, &gs)) {
                                 executa_mutare(drag_x, drag_y, board_to_row, board_to_col, &gs);
                                 gs.currentPlayer = !gs.currentPlayer;
+                                pgn_nav_index = -1; // Exit navigation mode after a move
                             }
                         }
                     }
@@ -403,14 +469,50 @@ void visual(int mode, int color) {
                 if (event.key.keysym.sym == SDLK_p) {
                     salveazaJocPGN(&gs, "game.pgn");
                     loadPGNText("game.pgn", pgn_moves, sizeof(pgn_moves));
+                    // Recount moves
+                    char moves_copy[4096];
+                    strcpy(moves_copy, pgn_moves);
+                    pgn_total_moves = 0;
+                    char *token = strtok(moves_copy, " \n\r\t");
+                    while (token) {
+                        if (strchr(token, '.') == NULL && strcmp(token, "1-0") && strcmp(token, "0-1") && strcmp(token, "1/2-1/2") && strcmp(token, "*")) {
+                            pgn_total_moves++;
+                        }
+                        token = strtok(NULL, " \n\r\t");
+                    }
+                    pgn_nav_index = -1;
                 }
                 if (event.key.keysym.sym == SDLK_l) {
                     reincepereJoc(&gs, "game.fen", &gs.pgn, 0);
+                    pgn_nav_index = -1;
                 }
                 if (event.key.keysym.sym == SDLK_o) {
                     reincepereJoc(&gs, "game.pgn", &gs.pgn, 1);
                     loadPGNText("game.pgn", pgn_moves, sizeof(pgn_moves));
+                    // Recount moves
+                    char moves_copy[4096];
+                    strcpy(moves_copy, pgn_moves);
+                    pgn_total_moves = 0;
+                    char *token = strtok(moves_copy, " \n\r\t");
+                    while (token) {
+                        if (strchr(token, '.') == NULL && strcmp(token, "1-0") && strcmp(token, "0-1") && strcmp(token, "1/2-1/2") && strcmp(token, "*")) {
+                            pgn_total_moves++;
+                        }
+                        token = strtok(NULL, " \n\r\t");
+                    }
+                    pgn_nav_index = -1;
                 }
+                if (event.key.keysym.sym == SDLK_UP) {
+                    pgn_scroll -= 30;
+                    if (pgn_scroll < 0) pgn_scroll = 0;
+                }
+                if (event.key.keysym.sym == SDLK_DOWN) {
+                    pgn_scroll += 30;
+                }
+            }
+            if (event.type == SDL_MOUSEWHEEL) {
+                pgn_scroll -= event.wheel.y * 30;
+                if (pgn_scroll < 0) pgn_scroll = 0;
             }
         }
 
@@ -418,12 +520,80 @@ void visual(int mode, int color) {
         if (pgn_save) {
             salveazaJocPGN(&gs, "game.pgn");
             loadPGNText("game.pgn", pgn_moves, sizeof(pgn_moves));
+            // Recount moves
+            char moves_copy[4096];
+            strcpy(moves_copy, pgn_moves);
+            pgn_total_moves = 0;
+            char *token = strtok(moves_copy, " \n\r\t");
+            while (token) {
+                if (strchr(token, '.') == NULL && strcmp(token, "1-0") && strcmp(token, "0-1") && strcmp(token, "1/2-1/2") && strcmp(token, "*")) {
+                    pgn_total_moves++;
+                }
+                token = strtok(NULL, " \n\r\t");
+            }
+            pgn_nav_index = -1;
+            pgn_save = 0;
         }
         if (pgn_load) {
             reincepereJoc(&gs, "game.pgn", &gs.pgn, 1);
             loadPGNText("game.pgn", pgn_moves, sizeof(pgn_moves));
+            // Recount moves
+            char moves_copy[4096];
+            strcpy(moves_copy, pgn_moves);
+            pgn_total_moves = 0;
+            char *token = strtok(moves_copy, " \n\r\t");
+            while (token) {
+                if (strchr(token, '.') == NULL && strcmp(token, "1-0") && strcmp(token, "0-1") && strcmp(token, "1/2-1/2") && strcmp(token, "*")) {
+                    pgn_total_moves++;
+                }
+                token = strtok(NULL, " \n\r\t");
+            }
+            pgn_nav_index = -1;
+            pgn_load = 0;
         }
-        // (pgn_left/pgn_right: add replay logic here if you want)
+        // PGN navigation
+        if (pgn_left) {
+            if (pgn_nav_index == -1) pgn_nav_index = 0; // Enter navigation mode from start
+            else if (pgn_nav_index > 0) pgn_nav_index--;
+            pgn_left = 0;
+        }
+        if (pgn_right) {
+            if (pgn_nav_index == -1) pgn_nav_index = 0; // Enter navigation mode from start
+            else if (pgn_nav_index < pgn_total_moves) pgn_nav_index++;
+            pgn_right = 0;
+        }
+
+        // --- PGN replay logic ---
+        if (pgn_nav_index != -1) {
+            gs = initializeGame();
+            gs.pgn = initializarePGN();
+            gs.currentPlayer = 0;
+            // Parse PGN and play up to pgn_nav_index moves
+            char moves_copy[4096];
+            strcpy(moves_copy, pgn_moves);
+            char *token = strtok(moves_copy, " \n\r\t");
+            int move_count = 0;
+            while (token && move_count < pgn_nav_index) {
+                if (strchr(token, '.') == NULL && strcmp(token, "1-0") && strcmp(token, "0-1") && strcmp(token, "1/2-1/2") && strcmp(token, "*")) {
+                    // e2e4 format
+                    if (strlen(token) >= 4 && isalpha(token[0]) && isdigit(token[1]) && isalpha(token[2]) && isdigit(token[3])) {
+                        int y1 = token[0] - 'a';
+                        int x1 = 8 - (token[1] - '0');
+                        int y2 = token[2] - 'a';
+                        int x2 = 8 - (token[3] - '0');
+                        if (validareMiscare(x1, y1, x2, y2, &gs) &&
+                            !mutareIeseDinSah(x1, y1, x2, y2, &gs)) {
+                            executa_mutare(x1, y1, x2, y2, &gs);
+                            gs.currentPlayer = !gs.currentPlayer;
+                        }
+                    }
+                    move_count++;
+                }
+                token = strtok(NULL, " \n\r\t");
+            }
+            gameover = 0;
+            end_message[0] = 0;
+        }
 
         // --- CHECK/CHECKMATE/RESULT LOGIC ---
         is_check = isInCheck(&gs, gs.currentPlayer);
@@ -475,9 +645,10 @@ void visual(int mode, int color) {
             SDL_FreeSurface(surface);
             SDL_DestroyTexture(texture);
         }
-
+        char formatted_pgn[2048];
+        format_pgn_for_panel(pgn_moves, formatted_pgn, sizeof(formatted_pgn), 10);
         drawSidePanel(renderer, font, end_message, gameover, mx, my, mouseDown, &to_menu, &quit,
-                      &pgn_left, &pgn_right, &pgn_save, &pgn_load, pgn_moves);
+                      &pgn_left, &pgn_right, &pgn_save, &pgn_load, formatted_pgn, pgn_scroll);
 
         SDL_RenderPresent(renderer);
         SDL_Delay(16);

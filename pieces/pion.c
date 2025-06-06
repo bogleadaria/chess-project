@@ -5,6 +5,10 @@
 
 int Pion(int x1, int y1, int x2, int y2, GameState *gs)
 {
+    char dest = gs->tabla[x2][y2];
+    if (dest == 'R' || dest == 'r') {
+        return 0;
+    }
     if (gs->tabla[x1][y1] == 'P' && x2 < 8 && x2 >= 0 && y2 < 8 && y2 >= 0)
     {
         if (y1 == y2 && x2 == x1 - 1 && gs->tabla[x2][y2] == ' ')

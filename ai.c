@@ -233,7 +233,7 @@ Move findBestMove(GameState *gs, bool culoare_ai, Move avoid)
     initMoveList(&lista);
     int jucator = gs->currentPlayer;
 
-    // Generate all moves
+    // Generate all possible moves for the current player
     genereazaToateMutarilePion(gs, &lista, jucator);
     genereazaToateMutarileCal(gs, &lista, jucator);
     genereazaToateMutarileNebun(gs, &lista, jucator);
@@ -241,37 +241,29 @@ Move findBestMove(GameState *gs, bool culoare_ai, Move avoid)
     genereazaToateMutarileDama(gs, &lista, jucator);
     genereazaToateMutarileRege(gs, &lista, jucator);
 
-    Move bestMove;
-    if (culoare_ai == 0)
-    {
-        bestMove.scor = -INF;
-        for (int i = 0; i < lista.count; i++)
-        {
-            GameState copie = *gs;
-            Move m = lista.mutari[i];
-            executa_mutare(m.x1, m.y1, m.x2, m.y2, &copie);
-            float scor = minimax(&copie, DEPTH - 1, -INF, INF, 0); // maximizingPlayer=0 pentru adversar (negru)
-            if (scor > bestMove.scor || i == 0)
-            {
-                bestMove = m;
-                bestMove.scor = scor;
-            }
+    // Filter only legal moves
+    MoveList legal;
+    initMoveList(&legal);
+    for (int i = 0; i < lista.count; i++) {
+        Move m = lista.mutari[i];
+        if (validareMiscare(m.x1, m.y1, m.x2, m.y2, gs) &&
+            !mutareIeseDinSah(m.x1, m.y1, m.x2, m.y2, gs)) {
+            legal.mutari[legal.count++] = m;
         }
     }
-    else
-    {
-        bestMove.scor = INF;
-        for (int i = 0; i < lista.count; i++)
-        {
-            GameState copie = *gs;
-            Move m = lista.mutari[i];
-            executa_mutare(m.x1, m.y1, m.x2, m.y2, &copie);
-            float scor = minimax(&copie, DEPTH - 1, -INF, INF, 1); // maximizingPlayer=1 pentru adversar (alb)
-            if (scor < bestMove.scor || i == 0)
-            {
-                bestMove = m;
-                bestMove.scor = scor;
-            }
+
+    Move bestMove = { .x1 = -1, .y1 = -1, .x2 = -1, .y2 = -1, .scor = -INF };
+    float bestScore = -INF;
+
+    for (int i = 0; i < legal.count; i++) {
+        GameState copie = *gs;
+        Move m = legal.mutari[i];
+        executa_mutare(m.x1, m.y1, m.x2, m.y2, &copie);
+        float score = minimax(&copie, DEPTH - 1, -INF, INF, !jucator);
+        if (score > bestScore || bestMove.x1 == -1) {
+            bestScore = score;
+            bestMove = m;
+            bestMove.scor = score;
         }
     }
     return bestMove;
