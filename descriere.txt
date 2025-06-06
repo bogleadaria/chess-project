@@ -1,0 +1,32 @@
+Pentru distributii de linux (Debian) noi rulati in terminal comenzile urmatoare pentru instalarea kitului de compilare de baza si librariile aditionale:
+sudo apt-get install build-essential
+sudo apt-get install libsdl2-image-dev 
+sudo apt-get install libsdl2-mixer-dev 
+sudo apt-get install libsdl2-ttf-
+sudo apt install make
+
+Apoi in fisierul care contine programul rulati comanda:
+
+make
+
+Pentru windows aveti nevoie de kitul compiler c/c++ si kitul baza sdl2 (make este optional)
+
+rulati in terminalul din vscode sau cmd comanda 
+
+gcc -Wall -I. -Ipieces main.c g.c game.c move_validation.c ai.c pieces/*.c -lm -o chess_game -lSDL2 -lSDL2_image -lSDL2_ttf && ./chess_game
+
+Sau daca aveti make rulati:
+
+make
+
+Daca librariile sunt instalate corespunzator si compilatorul functioneaza ar trebui sa se deschida o interfata ce reprezinta un meniu format din
+3 butoane "ai vs om", "om vs om" sau "iesire". fiecare buton porneste un joc cu functionalitatea descrisa de acesta.
+
+In interiorul modurilor de joc accesate , pe langa jocul propriu zis mai sunt 2 butoane, primul care inchide jocul actual si deschide un meniu , iar 
+al doilea care inchide aplicatia.
+
+Pentru a salva jocul curent in format FEN apasam tasta "F" 
+Pentru a da load la jocul salvat in format FEN apasam tasta "L"
+Pentru a salva jocul in PGN (format international) apasam tasta "P"
+
+Instructiunile cu privire la save si load sunt regasite si in oricare dintre modurile de joc alese in partea dreapta deasupra butoanelor de meniu si iesire.

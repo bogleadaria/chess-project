@@ -90,7 +90,7 @@ int isSquareAttacked(GameState *gs, int x, int y, int attackerPlayer)
     {
         return 0;
     }
-    int pionDir = (attackerPlayer == 0) ? -1 : 1; // Alb: -1 (sus), Negru: 1 (jos)
+    int pionDir = (attackerPlayer == 0) ? 1 : -1; // Alb: 1 (sus), Negru: -1 (jos)
     if ((x + pionDir >= 0 && x + pionDir < 8 && y - 1 >= 0 && gs->tabla[x + pionDir][y - 1] == (attackerPlayer ? 'p' : 'P')) ||
         (x + pionDir >= 0 && x + pionDir < 8 && y + 1 < 8 && gs->tabla[x + pionDir][y + 1] == (attackerPlayer ? 'p' : 'P')))
     {

@@ -7,6 +7,8 @@
 #include "pieces.h"
 #include "game.h"
 
+extern char promotion_choice;
+
 int endsWith(const char *fisier, const char *sufix)
 {
     if (!fisier || !sufix)
@@ -245,10 +247,10 @@ void executa_mutare( int x1, int y1, int x2, int y2, GameState *gs)
         }
         else
         {
-            char promo;
-            printf("Promovare pion! Alege (D, C, T, N): ");
-            scanf(" %c", &promo);
-            gs->tabla[x2][y2] = toupper(promo);
+            // char promo;
+            // printf("Promovare pion! Alege (D, C, T, N): ");
+            // scanf(" %c", &promo);
+            gs->tabla[x2][y2] = toupper(/*promo*/ promotion_choice);
         }
     }
     else if (isPionMove && (x2 == 7 && piece == 'p'))
@@ -259,10 +261,10 @@ void executa_mutare( int x1, int y1, int x2, int y2, GameState *gs)
         }
         else
         {
-            char promo;
-            printf("Promovare pion! Alege (d, c, t, n): ");
-            scanf(" %c", &promo);
-            gs->tabla[x2][y2] = tolower(promo);
+            // char promo;
+            // printf("Promovare pion! Alege (d, c, t, n): ");
+            // scanf(" %c", &promo);
+            gs->tabla[x2][y2] = tolower(/*promo*/ promotion_choice);
         }
     }
     gs->pgn.Captura[gs->pgn.historyCount]=captura;

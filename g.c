@@ -19,6 +19,16 @@
 #define BUTTON_HEIGHT 50
 #define BUTTON_MARGIN 20
 
+// --- Pawn promotion GUI state ---
+typedef struct {
+    int active;
+    int from_x, from_y, to_x, to_y;
+    int color; // 0 = alb, 1 = negru
+} PromotionGUI;
+
+char promotion_choice = 0;
+void set_promotion_choice(char c) { promotion_choice = c; }
+
 // --- Utility ---
 int piece_char_to_index(char piece) {
     switch (piece) {
@@ -155,10 +165,10 @@ void drawSidePanel(SDL_Renderer* renderer, TTF_Font* font, const char* end_messa
         "f - Save game (FEN)",
         "l - Load game (FEN)",
         "p - Save game (PGN)",
-        "o - Load game (PGN)"
+       /* "o - Load game (PGN)"  */
     };
     int label_y = 20; // Start higher up
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 3; ++i) {
         SDL_Surface* surf = TTF_RenderUTF8_Blended(small_font, labels[i], label_color);
         SDL_Texture* tex = SDL_CreateTextureFromSurface(renderer, surf);
         int tw, th;
@@ -212,7 +222,7 @@ void drawSidePanel(SDL_Renderer* renderer, TTF_Font* font, const char* end_messa
         if (right_hover && mouseDown) *pgn_right = 1;
 
         // Draw PGN moves text with scrolling
- SDL_Color pgn_color = {0, 0, 80};
+        SDL_Color pgn_color = {0, 0, 80};
         SDL_Surface* pgn_surface = TTF_RenderUTF8_Blended_Wrapped(font, pgn_moves, pgn_color, btn_w - 20);
         SDL_Texture* pgn_texture = SDL_CreateTextureFromSurface(renderer, pgn_surface);
         int pgn_tw = pgn_surface->w, pgn_th = pgn_surface->h;
@@ -240,6 +250,31 @@ void drawSidePanel(SDL_Renderer* renderer, TTF_Font* font, const char* end_messa
         SDL_FreeSurface(pgn_surface);
         SDL_DestroyTexture(pgn_texture);
     }
+}
+
+// --- Draw promotion buttons and return chosen piece char or 0 if none ---
+char drawPromotionButtons(SDL_Renderer* renderer, TTF_Font* font, int color, int mx, int my, int mouseDown) {
+    const char* labels[4] = {"Dama", "Tura", "Nebun", "Cal"};
+    char pieces[4] = {color ? 'd' : 'D', color ? 't' : 'T', color ? 'n' : 'N', color ? 'c' : 'C'};
+    int btn_w = 140, btn_h = 50, spacing = 20;
+    int bx = BOARD_WIDTH + 30, by = 120;
+    for (int i = 0; i < 4; ++i) {
+        int btn_y = by + i * (btn_h + spacing);
+        int hovered = mouseInRect(mx, my, bx, btn_y, btn_w, btn_h);
+        drawButton(renderer, font, labels[i], bx, btn_y, btn_w, btn_h, hovered);
+        if (hovered && mouseDown) return pieces[i];
+    }
+    // Draw label
+    SDL_Color color_text = {0,0,0};
+    SDL_Surface* surf = TTF_RenderUTF8_Blended(font, "Promovare pion:", color_text);
+    SDL_Texture* tex = SDL_CreateTextureFromSurface(renderer, surf);
+    int tw, th;
+    SDL_QueryTexture(tex, NULL, NULL, &tw, &th);
+    SDL_Rect dst = {bx, by-60, tw, th};
+    SDL_RenderCopy(renderer, tex, NULL, &dst);
+    SDL_FreeSurface(surf);
+    SDL_DestroyTexture(tex);
+    return 0;
 }
 
 // --- Graphical menu ---
@@ -272,8 +307,8 @@ void show_menu_and_start_game() {
                         if (mouseInRect(mx, my, bx, by, BUTTON_WIDTH, BUTTON_HEIGHT)) {
                             selected_mode = i+1;
                             if (selected_mode == 1) menu_stage = 1;
-                            else if (selected_mode == 2 || selected_mode == 3) running = 0;
-                            else if (selected_mode == 4) { running = 0; selected_mode = 0; }
+                            else if (selected_mode == 2 /*|| selected_mode == 3*/) running = 0;
+                            else if (selected_mode == 3) { running = 0; selected_mode = 0; }
                         }
                     }
                 } else if (menu_stage == 1) {
@@ -321,9 +356,9 @@ void show_menu_and_start_game() {
         visual(1, selected_color);
     } else if (selected_mode == 2) {
         visual(2, 0);
-    } else if (selected_mode == 3) {
-        visual(3, 0);
-    }
+    } //else if (selected_mode == 3) {
+    //     visual(3, 0);
+    // }
 }
 
 // --- Main visual function ---
@@ -393,12 +428,14 @@ void visual(int mode, int color) {
         }
     }
 
+    PromotionGUI promo = {0};
+    char promo_piece = 0;
+
     while (running && !to_menu && !quit) {
         // --- AI MOVE LOGIC ---
         if (!gameover && (
-            (mode == 1 && gs.currentPlayer == gs.culoare_ai) // Human vs AI, AI's turn
-            /*|| (mode == 3)*/ // AI vs AI, always AI's turn
-        ) && pgn_nav_index == -1) { // Only allow AI to move if not in PGN replay
+            (mode == 1 && gs.currentPlayer == gs.culoare_ai)
+        ) && pgn_nav_index == -1 && !promo.active) {
             SDL_Delay(300);
             Move nimic = { .x1 = -1, .y1 = -1, .x2 = -1, .y2 = -1, .scor = 0.0 };
             Move best = findBestMove(&gs, gs.culoare_ai, nimic);
@@ -413,6 +450,20 @@ void visual(int mode, int color) {
 
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) quit = 1;
+
+            // --- PROMOTION GUI EVENT HANDLING ---
+            if (promo.active) {
+                if (event.type == SDL_MOUSEMOTION) {
+                    mx = event.motion.x;
+                    my = event.motion.y;
+                }
+                if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) {
+                    mx = event.button.x;
+                    my = event.button.y;
+                    mouseDown = 1;
+                }
+                continue;
+            }
 
             int human_turn = (mode == 2) || (mode == 1 && gs.currentPlayer != gs.culoare_ai);
 
@@ -450,9 +501,22 @@ void visual(int mode, int color) {
                         int board_to_col = flip ? 7 - to_col : to_col;
                         if (validareMiscare(drag_x, drag_y, board_to_row, board_to_col, &gs)) {
                             if (!mutareIeseDinSah(drag_x, drag_y, board_to_row, board_to_col, &gs)) {
-                                executa_mutare(drag_x, drag_y, board_to_row, board_to_col, &gs);
-                                gs.currentPlayer = !gs.currentPlayer;
-                                pgn_nav_index = -1; // Exit navigation mode after a move
+                                // --- PAWN PROMOTION DETECTION ---
+                                char piece = gs.tabla[drag_x][drag_y];
+                                int is_pawn = (piece == 'P' || piece == 'p');
+                                int last_rank = (piece == 'P' && board_to_row == 0) || (piece == 'p' && board_to_row == 7);
+                                if (is_pawn && last_rank) {
+                                    promo.active = 1;
+                                    promo.from_x = drag_x; promo.from_y = drag_y;
+                                    promo.to_x = board_to_row; promo.to_y = board_to_col;
+                                    promo.color = (piece == 'P') ? 0 : 1;
+                                    dragging = 0; drag_x = drag_y = -1;
+                                    break;
+                                } else {
+                                    executa_mutare(drag_x, drag_y, board_to_row, board_to_col, &gs);
+                                    gs.currentPlayer = !gs.currentPlayer;
+                                    pgn_nav_index = -1; // Exit navigation mode after a move
+                                }
                             }
                         }
                     }
@@ -525,6 +589,29 @@ void visual(int mode, int color) {
                 pgn_scroll -= event.wheel.y * 30;
                 if (pgn_scroll < 0) pgn_scroll = 0;
             }
+        }
+
+        // --- PROMOTION GUI LOGIC ---
+        if (promo.active) {
+            SDL_SetRenderDrawColor(renderer, 100, 100, 100, 255);
+            SDL_RenderClear(renderer);
+            drawChessboard(renderer, flip);
+            drawAllPieces(renderer, gs.tabla, piece_textures, -1, -1, 0, flip);
+
+            promo_piece = drawPromotionButtons(renderer, font, promo.color, mx, my, mouseDown);
+
+            SDL_RenderPresent(renderer);
+            SDL_Delay(16);
+
+            if (promo_piece) {
+                set_promotion_choice(promo_piece);
+                executa_mutare(promo.from_x, promo.from_y, promo.to_x, promo.to_y, &gs);
+                gs.currentPlayer = !gs.currentPlayer;
+                promo.active = 0;
+                promo_piece = 0;
+                pgn_nav_index = -1;
+            }
+            continue;
         }
 
         // --- PGN panel button actions ---
@@ -635,8 +722,8 @@ void visual(int mode, int color) {
         if (dragging && gs.tabla[drag_x][drag_y] != ' ') {
             int idx = piece_char_to_index(gs.tabla[drag_x][drag_y]);
             if (idx >= 0 && piece_textures[idx]) {
-                int screen_row = flip ? 7 - drag_x : drag_x;
-                int screen_col = flip ? 7 - drag_y : drag_y;
+                // int screen_row = flip ? 7 - drag_x : drag_x;
+                // int screen_col = flip ? 7 - drag_y : drag_y;
                 int draw_x = mouse_x - SQUARE_SIZE / 2;
                 int draw_y = mouse_y - SQUARE_SIZE / 2;
                 SDL_Rect dst = { draw_x, draw_y, SQUARE_SIZE, SQUARE_SIZE };

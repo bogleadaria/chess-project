@@ -44,7 +44,7 @@ WORKDIR /app
 COPY . .
 
 # Compile your code
-RUN make -j$(nproc)
+RUN make
 
 # Command to run your program
 # CMD ["./chess_game"]
