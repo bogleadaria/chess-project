@@ -18,40 +18,21 @@ int endsWith(const char *fisier, const char *sufix)
     return strcmp(fisier + lenfisier - lensufix, sufix) == 0;
 }
 
-void transformareMiscare(char *start, char *finish, int *x1, int *y1, int *x2, int *y2, bool culoare_ai)
+void transformareMiscare(char *start, char *finish, int *x1, int *y1, int *x2, int *y2)
 {
-    if (culoare_ai == 1)
-    {
-        *y1 = tolower(start[0]) - 'a';
-        *x1 = 8 - (start[1] - '0');
-        *y2 = tolower(finish[0]) - 'a';
-        *x2 = 8 - (finish[1] - '0');
-    }
-    else
-    {
-        *y1 = tolower(start[0]) - 'a';
-        *x1 = 8 - (start[1] - '0');
-        *y2 = tolower(finish[0]) - 'a';
-        *x2 = 8 - (finish[1] - '0');
-    }
+
+    *y1 = tolower(start[0]) - 'a';
+    *x1 = 8 - (start[1] - '0');
+    *y2 = tolower(finish[0]) - 'a';
+    *x2 = 8 - (finish[1] - '0');
 }
 
-void transformareInversa(int *x1, int *y1, int *x2, int *y2, int *x1_t, int *y1_t, int *x2_t, int *y2_t, bool culoare_ai)
+void transformareInversa(int x1, int y1, int x2, int y2, int *x1_t, int *y1_t, int *x2_t, int *y2_t)
 {
-    if (culoare_ai == 1)
-    {
-        *y1_t = tolower(*y1 + 'a');
-        *x1_t = 8 - *x1;
-        *y2_t = tolower(*y2 - 'a');
-        *x2 = 8 - *x2;
-    }
-    else
-    {
-        *y1_t = tolower(*y1 + 'a');
-        *x1_t = *x1 + 1;
-        *y2_t = tolower(*y2 + 'a');
-        *x2_t = *x2 + 1;
-    }
+    *y1_t = 'a' + y1;
+    *x1_t = '0' + (8 - x1);
+    *y2_t = 'a' + y2;
+    *x2_t = '0' + (8 - x2);
 }
 
 int validareMiscare(int x1, int y1, int x2, int y2, GameState *gs)
@@ -125,9 +106,7 @@ int existaMutareLegala(GameState *gs)
 
 void salveazaIstoricMutari(GameState *gs, int x1, int y1, int x2, int y2)
 {
-    int x1_t, y1_t, x2_t, y2_t;
-    transformareInversa(&x1, &y1, &x2, &y2, &x1_t, &y1_t, &x2_t, &y2_t, gs->culoare_ai);
-    switch (toupper(gs->tabla[x1][y1]))
+    switch (toupper(gs->tabla[x2][y2]))
     {
     case 'P':
         gs->pgn.history[gs->pgn.historyCount][0] = '\0';
@@ -147,19 +126,18 @@ void salveazaIstoricMutari(GameState *gs, int x1, int y1, int x2, int y2)
     case 'R':
         gs->pgn.history[gs->pgn.historyCount][0] = 'K';
         break;
-
     default:
         break;
     }
-    gs->pgn.history[gs->pgn.historyCount][1] = y1_t;
-    gs->pgn.history[gs->pgn.historyCount][2] = x1_t;
-    gs->pgn.history[gs->pgn.historyCount][3] = y2_t;
-    gs->pgn.history[gs->pgn.historyCount][4] = x2_t;
+    gs->pgn.history[gs->pgn.historyCount][1] = 'a' + y1;
+    gs->pgn.history[gs->pgn.historyCount][2] = '1' + x1;
+    gs->pgn.history[gs->pgn.historyCount][3] = 'a' + y2;
+    gs->pgn.history[gs->pgn.historyCount][4] = '1' + x2;
     gs->pgn.history[gs->pgn.historyCount][5] = '\0'; // Asigură terminarea șirului
     gs->pgn.historyCount++;
 }
 
-void executa_mutare(int x1, int y1, int x2, int y2, GameState *gs)
+void executa_mutare( int x1, int y1, int x2, int y2, GameState *gs)
 {
     // Memorare informații pentru en passant și rocadă
     char piece = gs->tabla[x1][y1];
@@ -168,14 +146,8 @@ void executa_mutare(int x1, int y1, int x2, int y2, GameState *gs)
     int isTurnMove = (toupper(piece) == 'T');
     int isCapture = (gs->tabla[x2][y2] != ' ');
 
-    if (isCapture)
-    {
-        gs->Captura = 1; // Setează captura
-    }
-    else
-    {
-        gs->Captura = 0; // Nu este captura
-    }
+    int captura = isCapture;
+    int rocada = 0;
 
     // Actualizează en passant target
     if (isPionMove && abs(x2 - x1) == 2)
@@ -191,6 +163,7 @@ void executa_mutare(int x1, int y1, int x2, int y2, GameState *gs)
     // Gestionează captura en passant
     if (isPionMove && y2 != y1 && gs->tabla[x2][y2] == ' ')
     {
+        captura = 1;
         gs->tabla[x1][y2] = ' '; // Șterge pionul capturat
     }
     // Actualizează drepturile de rocadă
@@ -231,25 +204,20 @@ void executa_mutare(int x1, int y1, int x2, int y2, GameState *gs)
         if (y2 > y1)
         {
             turn_y = 7; // Rocada mică (dreapta)
-            gs->Rocada = 1;
+            rocada = 1;
         }
         else
         {
             turn_y = 0; // Rocada mare (stânga)
-            gs->Rocada = 2;
+            rocada = 2;
         }
         int new_turn_y = (y2 > y1) ? y2 - 1 : y2 + 1;
 
         gs->tabla[x1][y2] = piece; // Mută regele
         gs->tabla[x1][y1] = ' ';   // Șterge poziția inițială a regelui
-        gs->tabla[x1][y1] = ' ';   // Șterge poziția inițială a regelui
 
         gs->tabla[x1][new_turn_y] = gs->tabla[x1][turn_y];
         gs->tabla[x1][turn_y] = ' ';
-    }
-    else
-    {
-        gs->Rocada = 0;
     }
 
     // Actualizează contoarele de mutări
@@ -297,6 +265,8 @@ void executa_mutare(int x1, int y1, int x2, int y2, GameState *gs)
             gs->tabla[x2][y2] = tolower(promo);
         }
     }
+    gs->pgn.Captura[gs->pgn.historyCount]=captura;
+    gs->pgn.Rocada[gs->pgn.historyCount]=rocada;
     salveazaIstoricMutari(gs, x1, y1, x2, y2);
 }
 

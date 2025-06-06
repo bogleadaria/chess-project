@@ -249,7 +249,7 @@ int main()
                     scanf("%s", finish);
 
                     int x1, y1, x2, y2;
-                    transformareMiscare(start, finish, &x1, &y1, &x2, &y2, gs.culoare_ai);
+                    transformareMiscare(start, finish, &x1, &y1, &x2, &y2);
 
                     int valid = validareMiscare(x1, y1, x2, y2, &gs);
 

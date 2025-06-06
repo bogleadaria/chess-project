@@ -43,21 +43,11 @@ PGN initializarePGN()
         .white = "",
         .black = "",
         .result = "*",
-        .historyCount = 0}; 
+        .history = {{0}},
+        .historyCount = 0,
+        .Captura = {0},
+        .Rocada = {0}};
     return pgn;
-}
-
-void golesteFisierMiscari()
-{
-    FILE *f = fopen("mutari.txt", "w");
-    if (f != NULL)
-    {
-        fclose(f); // Fișierul este acum gol
-    }
-    else
-    {
-        printf("Eroare: nu am putut deschide miscari.txt pentru golire.\n");
-    }
 }
 
 void printTabla(char tabla[8][8], bool culoare_ai)
@@ -225,12 +215,12 @@ int isCheckmate(GameState *gs)
                 (gs->currentPlayer == 1 && islower(gs->tabla[x1][y1])))
                 for (int x2 = 0; x2 < 8; x2++)
                     for (int y2 = 0; y2 < 8; y2++)
-                        if (validareMiscare(x1, y1, x2, y2, gs)) {
-                                return 0;
+                        if (validareMiscare(x1, y1, x2, y2, gs))
+                        {
+                            return 0;
                         }
     return 1;
 }
-
 
 void salveazaJocFEN(const GameState *gs, const char *filename)
 
@@ -347,6 +337,46 @@ void salveazaJocFEN(const GameState *gs, const char *filename)
     printf("Jocul a fost salvat în fișierul '%s'.fen\n", filename);
 }
 
+void scrieIstoricMutari(FILE *file, const GameState *gs, int totalMutari)
+{
+    for (int i = 0; i < totalMutari; i++)
+    {
+        if (i % 2 == 0)
+        {
+            fprintf(file, "%d. ", (i / 2) + 1); // White's turn
+        }
+
+        char piesa = gs->pgn.history[i][0];
+        char fromCol = gs->pgn.history[i][1];
+        // char fromRow = gs->pgn.history[i][2];
+        char toCol = gs->pgn.history[i][3];
+        char toRow = gs->pgn.history[i][4];
+
+        int captura = gs->pgn.Captura[i];
+        int rocada = gs->pgn.Rocada[i];
+
+        if (rocada == 1)
+            fprintf(file, "O-O ");
+        else if (rocada == 2)
+            fprintf(file, "O-O-O ");
+        else
+        {
+            if (piesa != '\0')
+                fprintf(file, "%c", piesa);
+
+            if (captura)
+            {
+                if (piesa == '\0') // pion
+                    fprintf(file, "%cx", fromCol);
+                else
+                    fprintf(file, "x");
+            }
+
+            fprintf(file, "%c%c ", toCol, toRow);
+        }
+    }
+}
+
 void salveazaJocPGN(const GameState *gs, const char *filename)
 {
     FILE *file = fopen(filename, "w");
@@ -365,6 +395,8 @@ void salveazaJocPGN(const GameState *gs, const char *filename)
     fprintf(file, "[Black \"%s\"]\n", gs->pgn.black);
     fprintf(file, "[Result \"%s\"]\n", gs->pgn.result);
     fprintf(file, "\n");
+
+    scrieIstoricMutari(file, gs, gs->pgn.historyCount);
 
     fclose(file);
     printf("Jocul a fost salvat în fișierul '%s'.pgn\n", filename);
