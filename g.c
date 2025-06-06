@@ -5,6 +5,7 @@
 #include "game.h"
 #include "move_validation.h"
 #include "ai.h"
+#include <string.h>
 
 #define SCREEN_WIDTH 1100
 #define SCREEN_HEIGHT 800
@@ -17,6 +18,7 @@
 #define BUTTON_HEIGHT 50
 #define BUTTON_MARGIN 20
 
+// --- Utility ---
 int piece_char_to_index(char piece) {
     switch (piece) {
         case 'R': return 0; case 'D': return 1; case 'T': return 2;
@@ -92,8 +94,23 @@ int mouseInRect(int mx, int my, int x, int y, int w, int h) {
     return mx >= x && mx <= x+w && my >= y && my <= y+h;
 }
 
-// Draws the right panel, always visible
-void drawSidePanel(SDL_Renderer* renderer, TTF_Font* font, const char* end_message, int gameover, int mx, int my, int mouseDown, int* to_menu, int* quit) {
+// --- PGN text loader ---
+void loadPGNText(const char* filename, char* buf, size_t buflen) {
+    FILE* f = fopen(filename, "r");
+    if (!f) { buf[0] = 0; return; }
+    buf[0] = 0;
+    char line[512];
+    while (fgets(line, sizeof(line), f)) {
+        if (line[0] == '[') continue; // skip header
+        strncat(buf, line, buflen - strlen(buf) - 1);
+    }
+    fclose(f);
+}
+
+// --- Draws the right panel, always visible, with extra buttons ---
+void drawSidePanel(SDL_Renderer* renderer, TTF_Font* font, const char* end_message, int gameover, int mx, int my, int mouseDown,
+                   int* to_menu, int* quit, int* pgn_left, int* pgn_right, int* pgn_save, int* pgn_load,
+                   const char* pgn_moves) {
     SDL_Rect panel = {BOARD_WIDTH, 0, PANEL_WIDTH, SCREEN_HEIGHT};
     SDL_SetRenderDrawColor(renderer, 220, 220, 220, 255);
     SDL_RenderFillRect(renderer, &panel);
@@ -111,7 +128,7 @@ void drawSidePanel(SDL_Renderer* renderer, TTF_Font* font, const char* end_messa
         SDL_DestroyTexture(texture);
     }
 
-    // Buttons (always clickable)
+    // Main buttons
     int btn_w = PANEL_WIDTH - 40, btn_h = 50;
     int btn_x = BOARD_WIDTH + 20;
     int btn_y1 = 120, btn_y2 = 190;
@@ -124,17 +141,41 @@ void drawSidePanel(SDL_Renderer* renderer, TTF_Font* font, const char* end_messa
     if (menu_hover && mouseDown) *to_menu = 1;
     if (exit_hover && mouseDown) *quit = 1;
 
-    // PGN/Replay area (always visible)
+    // PGN/Replay area
     SDL_Rect pgn_area = {BOARD_WIDTH + 20, 270, btn_w, 500};
     SDL_SetRenderDrawColor(renderer, 200, 200, 240, 255);
     SDL_RenderFillRect(renderer, &pgn_area);
 
+    // PGN navigation and save/load buttons
+    int nav_btn_size = 40;
+    int nav_y = 280;
+    int nav_x_left = BOARD_WIDTH + 30;
+    int nav_x_right = BOARD_WIDTH + PANEL_WIDTH - 30 - nav_btn_size;
+    int nav_x_save = nav_x_left + nav_btn_size + 10;
+    int nav_x_load = nav_x_right - nav_btn_size - 10;
+
+    int left_hover = mouseInRect(mx, my, nav_x_left, nav_y, nav_btn_size, nav_btn_size);
+    int right_hover = mouseInRect(mx, my, nav_x_right, nav_y, nav_btn_size, nav_btn_size);
+    int save_hover = mouseInRect(mx, my, nav_x_save, nav_y, nav_btn_size, nav_btn_size);
+    int load_hover = mouseInRect(mx, my, nav_x_load, nav_y, nav_btn_size, nav_btn_size);
+
+    drawButton(renderer, font, "◀", nav_x_left, nav_y, nav_btn_size, nav_btn_size, left_hover);
+    drawButton(renderer, font, "▶", nav_x_right, nav_y, nav_btn_size, nav_btn_size, right_hover);
+    drawButton(renderer, font, "Save", nav_x_save, nav_y, nav_btn_size, nav_btn_size, save_hover);
+    drawButton(renderer, font, "Load", nav_x_load, nav_y, nav_btn_size, nav_btn_size, load_hover);
+
+    if (left_hover && mouseDown) *pgn_left = 1;
+    if (right_hover && mouseDown) *pgn_right = 1;
+    if (save_hover && mouseDown) *pgn_save = 1;
+    if (load_hover && mouseDown) *pgn_load = 1;
+
+    // Draw PGN moves text
     SDL_Color pgn_color = {0, 0, 80};
-    SDL_Surface* pgn_surface = TTF_RenderUTF8_Blended(font, "PGN Replay (coming soon)", pgn_color);
+    SDL_Surface* pgn_surface = TTF_RenderUTF8_Blended_Wrapped(font, pgn_moves, pgn_color, PANEL_WIDTH - 60);
     SDL_Texture* pgn_texture = SDL_CreateTextureFromSurface(renderer, pgn_surface);
     int pgn_tw, pgn_th;
     SDL_QueryTexture(pgn_texture, NULL, NULL, &pgn_tw, &pgn_th);
-    SDL_Rect pgn_dst = {BOARD_WIDTH + 30, 290, pgn_tw, pgn_th};
+    SDL_Rect pgn_dst = {BOARD_WIDTH + 30, nav_y + nav_btn_size + 10, pgn_tw, pgn_th};
     SDL_RenderCopy(renderer, pgn_texture, NULL, &pgn_dst);
     SDL_FreeSurface(pgn_surface);
     SDL_DestroyTexture(pgn_texture);
@@ -224,7 +265,7 @@ void show_menu_and_start_game() {
     }
 }
 
-
+// --- Main visual function ---
 void visual(int mode, int color) {
     SDL_Init(SDL_INIT_VIDEO);
     IMG_Init(IMG_INIT_PNG);
@@ -267,10 +308,14 @@ void visual(int mode, int color) {
     int flip = (mode == 1 && color == 1); // flip if human vs AI and human is black
     int gameover = 0;
     char end_message[128] = "";
+    int is_check = 0;
 
     TTF_Font* font = TTF_OpenFont("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 28);
 
     int to_menu = 0, quit = 0;
+
+    char pgn_moves[4096] = "";
+    loadPGNText("game.pgn", pgn_moves, sizeof(pgn_moves));
 
     while (running && !to_menu && !quit) {
         // --- AI MOVE LOGIC ---
@@ -281,13 +326,14 @@ void visual(int mode, int color) {
             SDL_Delay(300);
             Move nimic = { .x1 = -1, .y1 = -1, .x2 = -1, .y2 = -1, .scor = 0.0 };
             Move best = findBestMove(&gs, gs.culoare_ai, nimic);
-            if (best.x1 != -1) {
+            if (best.x1 != -1 && !mutareIeseDinSah(best.x1, best.y1, best.x2, best.y2, &gs)) {
                 executa_mutare(best.x1, best.y1, best.x2, best.y2, &gs);
                 gs.currentPlayer = !gs.currentPlayer;
             }
         }
 
         int mx = -1, my = -1, mouseDown = 0;
+        int pgn_left = 0, pgn_right = 0, pgn_save = 0, pgn_load = 0;
 
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) quit = 1;
@@ -326,16 +372,11 @@ void visual(int mode, int color) {
                     if (to_col < 8) { // Only allow drop on board
                         int board_to_row = flip ? 7 - to_row : to_row;
                         int board_to_col = flip ? 7 - to_col : to_col;
-                        // Only allow moves that get out of check
                         if (validareMiscare(drag_x, drag_y, board_to_row, board_to_col, &gs)) {
-                            // Simulate the move
-                            GameState gs_copy = gs;
-                            executa_mutare(drag_x, drag_y, board_to_row, board_to_col, &gs_copy);
-                            if (!isInCheck(&gs_copy, gs.currentPlayer)) {
+                            if (!mutareIeseDinSah(drag_x, drag_y, board_to_row, board_to_col, &gs)) {
                                 executa_mutare(drag_x, drag_y, board_to_row, board_to_col, &gs);
                                 gs.currentPlayer = !gs.currentPlayer;
                             }
-                            // else: illegal move, do nothing
                         }
                     }
                     dragging = 0;
@@ -345,26 +386,59 @@ void visual(int mode, int color) {
 
             // Always track mouse for panel buttons
             if (event.type == SDL_MOUSEMOTION) {
-    mx = event.motion.x;
-    my = event.motion.y;
-}
-if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) {
-    mx = event.button.x;
-    my = event.button.y;
-    mouseDown = 1;
-}
+                mx = event.motion.x;
+                my = event.motion.y;
+            }
+            if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) {
+                mx = event.button.x;
+                my = event.button.y;
+                mouseDown = 1;
+            }
+
+            // --- KEYBOARD SHORTCUTS FOR SAVE/LOAD ---
+            if (event.type == SDL_KEYDOWN) {
+                if (event.key.keysym.sym == SDLK_f) {
+                    salveazaJocFEN(&gs, "game.fen");
+                }
+                if (event.key.keysym.sym == SDLK_p) {
+                    salveazaJocPGN(&gs, "game.pgn");
+                    loadPGNText("game.pgn", pgn_moves, sizeof(pgn_moves));
+                }
+                if (event.key.keysym.sym == SDLK_l) {
+                    reincepereJoc(&gs, "game.fen", &gs.pgn, 0);
+                }
+                if (event.key.keysym.sym == SDLK_o) {
+                    reincepereJoc(&gs, "game.pgn", &gs.pgn, 1);
+                    loadPGNText("game.pgn", pgn_moves, sizeof(pgn_moves));
+                }
+            }
         }
 
-        // --- ENDGAME CHECKS ---
+        // --- PGN panel button actions ---
+        if (pgn_save) {
+            salveazaJocPGN(&gs, "game.pgn");
+            loadPGNText("game.pgn", pgn_moves, sizeof(pgn_moves));
+        }
+        if (pgn_load) {
+            reincepereJoc(&gs, "game.pgn", &gs.pgn, 1);
+            loadPGNText("game.pgn", pgn_moves, sizeof(pgn_moves));
+        }
+        // (pgn_left/pgn_right: add replay logic here if you want)
+
+        // --- CHECK/CHECKMATE/RESULT LOGIC ---
+        is_check = isInCheck(&gs, gs.currentPlayer);
         if (!gameover) {
             if (isCheckmate(&gs)) {
                 snprintf(end_message, sizeof(end_message), "Șah mat! %s câștigă!", gs.currentPlayer ? "Alb" : "Negru");
+                strcpy(gs.pgn.result, gs.currentPlayer ? "1-0" : "0-1");
                 gameover = 1;
             } else if (!existaMutareLegala(&gs)) {
                 if (isInCheck(&gs, gs.currentPlayer)) {
                     snprintf(end_message, sizeof(end_message), "Șah mat! %s câștigă!", gs.currentPlayer ? "Alb" : "Negru");
+                    strcpy(gs.pgn.result, gs.currentPlayer ? "1-0" : "0-1");
                 } else {
                     snprintf(end_message, sizeof(end_message), "Remiză (pat)!");
+                    strcpy(gs.pgn.result, "1/2-1/2");
                 }
                 gameover = 1;
             }
@@ -389,8 +463,21 @@ if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT)
             }
         }
 
-        // Always draw the side panel (buttons only active if gameover)
-        drawSidePanel(renderer, font, end_message, gameover, mx, my, mouseDown, &to_menu, &quit);
+        // Optionally: show "Șah!" in the panel if is_check
+        if (is_check && !gameover) {
+            SDL_Color color = {255, 0, 0};
+            SDL_Surface* surface = TTF_RenderUTF8_Blended(font, "Șah!", color);
+            SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+            int tw, th;
+            SDL_QueryTexture(texture, NULL, NULL, &tw, &th);
+            SDL_Rect dst = {BOARD_WIDTH + (PANEL_WIDTH-tw)/2, 10, tw, th};
+            SDL_RenderCopy(renderer, texture, NULL, &dst);
+            SDL_FreeSurface(surface);
+            SDL_DestroyTexture(texture);
+        }
+
+        drawSidePanel(renderer, font, end_message, gameover, mx, my, mouseDown, &to_menu, &quit,
+                      &pgn_left, &pgn_right, &pgn_save, &pgn_load, pgn_moves);
 
         SDL_RenderPresent(renderer);
         SDL_Delay(16);
