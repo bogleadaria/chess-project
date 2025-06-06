@@ -100,7 +100,7 @@ int isSquareAttacked(GameState *gs, int x, int y, int attackerPlayer)
     {
         return 0;
     }
-    int pionDir = (attackerPlayer == 0) ? -1 : 1; // Alb: -1 (sus), Negru: 1 (jos)
+    int pionDir = (attackerPlayer == 0) ? 1 : -1; // Alb: -1 (sus), Negru: 1 (jos)
     if ((x + pionDir >= 0 && x + pionDir < 8 && y - 1 >= 0 && gs->tabla[x + pionDir][y - 1] == (attackerPlayer ? 'p' : 'P')) ||
         (x + pionDir >= 0 && x + pionDir < 8 && y + 1 < 8 && gs->tabla[x + pionDir][y + 1] == (attackerPlayer ? 'p' : 'P')))
     {
@@ -217,18 +217,17 @@ int isCheckmate(GameState *gs)
 {
     if (!isInCheck(gs, gs->currentPlayer))
         return 0;
-
-    // Generează toate mutările posibile
     for (int x1 = 0; x1 < 8; x1++)
         for (int y1 = 0; y1 < 8; y1++)
             if ((gs->currentPlayer == 0 && isupper(gs->tabla[x1][y1])) ||
                 (gs->currentPlayer == 1 && islower(gs->tabla[x1][y1])))
                 for (int x2 = 0; x2 < 8; x2++)
                     for (int y2 = 0; y2 < 8; y2++)
-                        if (validareMiscare(x1, y1, x2, y2, gs)) {
-                                return 0;
+                        if (validareMiscare(x1, y1, x2, y2, gs) &&
+                            !mutareIeseDinSah(x1, y1, x2, y2, gs)) {
+                            return 0; // există cel puțin o mutare legală
                         }
-    return 1;
+    return 1; // nu există mutări legale și e în șah => șah mat
 }
 
 

@@ -162,6 +162,17 @@ float evaluatePosition(GameState *gs)
         scor += 0.5;
     if (gs->canBlackCastleKingside)
         scor -= 0.5;
+
+    // Penalize useless checks (AI will not endlessly check)
+    if (isInCheck(gs, 1) && !isCheckmate(gs)) scor -= 0.05;
+    if (isInCheck(gs, 0) && !isCheckmate(gs)) scor += 0.05;
+
+    // Encourage pawn advancement 
+    for (int i = 0; i < 8; i++)
+        for (int j = 0; j < 8; j++)
+            if (gs->tabla[i][j] == 'P') scor += i * 0.01;
+            else if (gs->tabla[i][j] == 'p') scor -= (7 - i) * 0.01;
+
     return scor;
 }
 

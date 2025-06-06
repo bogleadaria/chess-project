@@ -103,24 +103,24 @@ int validareRocada(int x1, int y1, int x2, int y2, GameState *gs)
 }
 
 // Verifică dacă există vreo mutare legală pentru jucătorul curent (pentru pat/remiză)
-int existaMutareLegala(GameState *gs)
-{
-    for (int x1 = 0; x1 < 8; x1++)
-        for (int y1 = 0; y1 < 8; y1++)
-            if ((gs->currentPlayer == 0 && isupper(gs->tabla[x1][y1])) ||
-                (gs->currentPlayer == 1 && islower(gs->tabla[x1][y1])))
-            {
-                for (int x2 = 0; x2 < 8; x2++)
-                    for (int y2 = 0; y2 < 8; y2++)
-                    {
-                        for (int y2 = 0; y2 < 8; y2++)
-                        {
-                            if (validareMiscare(x1, y1, x2, y2, gs) == 1)
-                                return 1;
+int existaMutareLegala(GameState *gs) {
+    for (int x1 = 0; x1 < 8; x1++) {
+        for (int y1 = 0; y1 < 8; y1++) {
+            char piece = gs->tabla[x1][y1];
+            if ((gs->currentPlayer == 0 && piece >= 'A' && piece <= 'Z') ||
+                (gs->currentPlayer == 1 && piece >= 'a' && piece <= 'z')) {
+                for (int x2 = 0; x2 < 8; x2++) {
+                    for (int y2 = 0; y2 < 8; y2++) {
+                        if (validareMiscare(x1, y1, x2, y2, gs) &&
+                            !mutareIeseDinSah(x1, y1, x2, y2, gs)) {
+                            return 1; // At least one legal move exists
                         }
                     }
+                }
             }
-    return 0;
+        }
+    }
+    return 0; // No legal moves
 }
 
 void salveazaIstoricMutari(GameState *gs, int x1, int y1, int x2, int y2)
