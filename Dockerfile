@@ -7,6 +7,9 @@ FROM alpine:latest
 #     build-essential \
 #     git \
 #     cmake \
+#     libsdl2-mixer-dev \
+#     libsdl2-image-dev \
+#     libsdl2-ttf-devs \
 #     libgl1-mesa-dev \
 #     libx11-dev \
 #     libxcursor-dev \
@@ -18,6 +21,9 @@ RUN apk add --no-cache \
     build-base \
     git \
     cmake \
+    libsdl2-mixer-dev \
+    libsdl2-image-dev \
+    libsdl2-ttf-devs \
     libx11-dev \
     libxcursor-dev \
     libxrandr-dev \
@@ -38,10 +44,7 @@ WORKDIR /app
 COPY . .
 
 # Compile your code
-RUN gcc -Wall -I. -Ipieces main.c game.c move_validation.c pieces/*.c -o chess_game
-
-#pt raylib : P 
-#-I/raylib/src -L/raylib/src -lraylib -lm -ldl -lpthread -lGL -lX11
+RUN make -j$(nproc)
 
 # Command to run your program
-CMD ["./chess_game"]
+# CMD ["./chess_game"]
