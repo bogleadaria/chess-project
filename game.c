@@ -43,21 +43,11 @@ PGN initializarePGN()
         .white = "",
         .black = "",
         .result = "*",
-        .historyCount = 0}; 
+        .history = {{0}},
+        .historyCount = 0,
+        .Captura = {0},
+        .Rocada = {0}};
     return pgn;
-}
-
-void golesteFisierMiscari()
-{
-    FILE *f = fopen("mutari.txt", "w");
-    if (f != NULL)
-    {
-        fclose(f); // Fișierul este acum gol
-    }
-    else
-    {
-        printf("Eroare: nu am putut deschide miscari.txt pentru golire.\n");
-    }
 }
 
 void printTabla(char tabla[8][8], bool culoare_ai)
@@ -100,7 +90,7 @@ int isSquareAttacked(GameState *gs, int x, int y, int attackerPlayer)
     {
         return 0;
     }
-    int pionDir = (attackerPlayer == 0) ? 1 : -1; // Alb: -1 (sus), Negru: 1 (jos)
+    int pionDir = (attackerPlayer == 0) ? -1 : 1; // Alb: -1 (sus), Negru: 1 (jos)
     if ((x + pionDir >= 0 && x + pionDir < 8 && y - 1 >= 0 && gs->tabla[x + pionDir][y - 1] == (attackerPlayer ? 'p' : 'P')) ||
         (x + pionDir >= 0 && x + pionDir < 8 && y + 1 < 8 && gs->tabla[x + pionDir][y + 1] == (attackerPlayer ? 'p' : 'P')))
     {
@@ -217,19 +207,20 @@ int isCheckmate(GameState *gs)
 {
     if (!isInCheck(gs, gs->currentPlayer))
         return 0;
+
+    // Generează toate mutările posibile
     for (int x1 = 0; x1 < 8; x1++)
         for (int y1 = 0; y1 < 8; y1++)
             if ((gs->currentPlayer == 0 && isupper(gs->tabla[x1][y1])) ||
                 (gs->currentPlayer == 1 && islower(gs->tabla[x1][y1])))
                 for (int x2 = 0; x2 < 8; x2++)
                     for (int y2 = 0; y2 < 8; y2++)
-                        if (validareMiscare(x1, y1, x2, y2, gs) &&
-                            !mutareIeseDinSah(x1, y1, x2, y2, gs)) {
-                            return 0; // există cel puțin o mutare legală
+                        if (validareMiscare(x1, y1, x2, y2, gs))
+                        {
+                            return 0;
                         }
-    return 1; // nu există mutări legale și e în șah => șah mat
+    return 1;
 }
-
 
 void salveazaJocFEN(const GameState *gs, const char *filename)
 
@@ -346,6 +337,46 @@ void salveazaJocFEN(const GameState *gs, const char *filename)
     printf("Jocul a fost salvat în fișierul '%s'.fen\n", filename);
 }
 
+void scrieIstoricMutari(FILE *file, const GameState *gs, int totalMutari)
+{
+    for (int i = 0; i < totalMutari; i++)
+    {
+        if (i % 2 == 0)
+        {
+            fprintf(file, "%d. ", (i / 2) + 1); // White's turn
+        }
+
+        char piesa = gs->pgn.history[i][0];
+        char fromCol = gs->pgn.history[i][1];
+        // char fromRow = gs->pgn.history[i][2];
+        char toCol = gs->pgn.history[i][3];
+        char toRow = gs->pgn.history[i][4];
+
+        int captura = gs->pgn.Captura[i];
+        int rocada = gs->pgn.Rocada[i];
+
+        if (rocada == 1)
+            fprintf(file, "O-O ");
+        else if (rocada == 2)
+            fprintf(file, "O-O-O ");
+        else
+        {
+            if (piesa != '\0')
+                fprintf(file, "%c", piesa);
+
+            if (captura)
+            {
+                if (piesa == '\0') // pion
+                    fprintf(file, "%cx", fromCol);
+                else
+                    fprintf(file, "x");
+            }
+
+            fprintf(file, "%c%c ", toCol, toRow);
+        }
+    }
+}
+
 void salveazaJocPGN(const GameState *gs, const char *filename)
 {
     FILE *file = fopen(filename, "w");
@@ -365,23 +396,11 @@ void salveazaJocPGN(const GameState *gs, const char *filename)
     fprintf(file, "[Result \"%s\"]\n", gs->pgn.result);
     fprintf(file, "\n");
 
-    // SCRIE ISTORICUL MUTARILOR
-    int move_number = 1;
-    for (int i = 0; i < gs->pgn.historyCount; i++) {
-        if (i % 2 == 0) {
-            fprintf(file, "%d. ", move_number++);
-        }
-        fprintf(file, "%s ", gs->pgn.history[i]);
-        // Optional: line break every 10 moves for readability
-        if ((i+1) % 10 == 0) {
-            fprintf(file, "\n");
-        }
-    }
-    // SCRIE REZULTATUL LA FINAL
-    fprintf(file, "%s\n", gs->pgn.result);
+    scrieIstoricMutari(file, gs, gs->pgn.historyCount);
 
     fclose(file);
     printf("Jocul a fost salvat în fișierul '%s'.pgn\n", filename);
+    // SCRIE ISTORICUL MUTARILOR
 }
 
 void afiseazaHeaderPGN(PGN *pgn)
@@ -561,7 +580,7 @@ int reincepereJoc(GameState *gs, const char *filename, PGN *pgn, bool type)
         printf("Joc încărcat cu succes din '%s'!\n", filename);
         return 1;
     }
-        else if (type == 1)
+    else if (type == 1)
     {
         FILE *file = fopen(filename, "r");
         if (!file)
@@ -570,76 +589,11 @@ int reincepereJoc(GameState *gs, const char *filename, PGN *pgn, bool type)
             return 0;
         }
 
-        // Reset game state
-        *gs = initializeGame();
-        *pgn = initializarePGN();
-        gs->isPGN = 1;
+        afiseazaHeaderPGN(pgn);
 
-        char line[512];
-        int in_moves = 0;
-        char moves[4096] = "";
-        while (fgets(line, sizeof(line), file)) {
-            if (line[0] == '[') {
-                // Parse header fields
-                char key[32], value[256];
-                if (sscanf(line, "[%31[^ ] \"%255[^\"]\"]", key, value) == 2) {
-                    if (strcmp(key, "Event") == 0) strncpy(gs->pgn.event, value, sizeof(gs->pgn.event)-1);
-                    else if (strcmp(key, "Site") == 0) strncpy(gs->pgn.site, value, sizeof(gs->pgn.site)-1);
-                    else if (strcmp(key, "Date") == 0) strncpy(gs->pgn.date, value, sizeof(gs->pgn.date)-1);
-                    else if (strcmp(key, "Round") == 0) gs->pgn.round = atoi(value);
-                    else if (strcmp(key, "White") == 0) strncpy(gs->pgn.white, value, sizeof(gs->pgn.white)-1);
-                    else if (strcmp(key, "Black") == 0) strncpy(gs->pgn.black, value, sizeof(gs->pgn.black)-1);
-                    else if (strcmp(key, "Result") == 0) strncpy(gs->pgn.result, value, sizeof(gs->pgn.result)-1);
-                }
-                continue;
-            }
-            // Concatenate move lines
-            strcat(moves, line);
-        }
         fclose(file);
-
-        // Parse moves
-        char *token = strtok(moves, " \n\r\t");
-        int move_count = 0;
-        int move_number = 1;
-        gs->currentPlayer = 0; // White starts
-        while (token) {
-            // Skip move numbers (e.g., "1.", "2.", etc.)
-            if (strchr(token, '.')) {
-                token = strtok(NULL, " \n\r\t");
-                continue;
-            }
-            // Stop at result
-            if (strcmp(token, "1-0") == 0 || strcmp(token, "0-1") == 0 || strcmp(token, "1/2-1/2") == 0 || strcmp(token, "*") == 0) {
-                strncpy(gs->pgn.result, token, sizeof(gs->pgn.result)-1);
-                break;
-            }
-            // Save move in PGN struct
-            strncpy(gs->pgn.history[move_count], token, sizeof(gs->pgn.history[move_count])-1);
-            gs->pgn.history[move_count][sizeof(gs->pgn.history[move_count])-1] = '\0';
-            move_count++;
-
-            // Try to apply the move to the board
-            // If your moves are in coordinate format (e.g., e2e4), convert to indices:
-            if (strlen(token) >= 4 && isalpha(token[0]) && isdigit(token[1]) && isalpha(token[2]) && isdigit(token[3])) {
-                int y1 = token[0] - 'a';
-                int x1 = 8 - (token[1] - '0');
-                int y2 = token[2] - 'a';
-                int x2 = 8 - (token[3] - '0');
-                if (validareMiscare(x1, y1, x2, y2, gs)) {
-                    executa_mutare(x1, y1, x2, y2, gs);
-                    gs->currentPlayer = !gs->currentPlayer;
-                }
-            }
-            // If you use SAN or other notation, you need a parser for that.
-
-            token = strtok(NULL, " \n\r\t");
-        }
-        gs->pgn.historyCount = move_count;
-
         printf("Joc încărcat cu succes din '%s'!\n", filename);
         return 1;
     }
     return 0;
-
 }

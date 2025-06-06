@@ -188,47 +188,58 @@ void drawSidePanel(SDL_Renderer* renderer, TTF_Font* font, const char* end_messa
     if (menu_hover && mouseDown) *to_menu = 1;
     if (exit_hover && mouseDown) *quit = 1;
 
-    // PGN/Replay area
-    int pgn_area_y = btn_y2 + btn_h + 20;
-    SDL_Rect pgn_area = {BOARD_WIDTH + 20, pgn_area_y, btn_w, 500};
-    SDL_SetRenderDrawColor(renderer, 200, 200, 240, 255);
-    SDL_RenderFillRect(renderer, &pgn_area);
+    // --- Only show PGN panel if pgn_moves is not empty ---
+    if (pgn_moves && pgn_moves[0]) {
+        // PGN/Replay area
+        int pgn_area_y = btn_y2 + btn_h + 20;
+        SDL_Rect pgn_area = {BOARD_WIDTH + 20, pgn_area_y, btn_w, 500};
+        SDL_SetRenderDrawColor(renderer, 200, 200, 240, 255);
+        SDL_RenderFillRect(renderer, &pgn_area);
 
-    // PGN navigation buttons
-    int nav_btn_size = 40;
-    int nav_y = pgn_area_y + 10;
-    int nav_x_left = BOARD_WIDTH + 30;
-    int nav_x_right = BOARD_WIDTH + PANEL_WIDTH - 30 - nav_btn_size;
+        // PGN navigation buttons
+        int nav_btn_size = 40;
+        int nav_y = pgn_area_y + 10;
+        int nav_x_left = BOARD_WIDTH + 30;
+        int nav_x_right = BOARD_WIDTH + PANEL_WIDTH - 30 - nav_btn_size;
 
-    int left_hover = mouseInRect(mx, my, nav_x_left, nav_y, nav_btn_size, nav_btn_size);
-    int right_hover = mouseInRect(mx, my, nav_x_right, nav_y, nav_btn_size, nav_btn_size);
+        int left_hover = mouseInRect(mx, my, nav_x_left, nav_y, nav_btn_size, nav_btn_size);
+        int right_hover = mouseInRect(mx, my, nav_x_right, nav_y, nav_btn_size, nav_btn_size);
 
-    drawButton(renderer, font, "◀", nav_x_left, nav_y, nav_btn_size, nav_btn_size, left_hover);
-    drawButton(renderer, font, "▶", nav_x_right, nav_y, nav_btn_size, nav_btn_size, right_hover);
+        drawButton(renderer, font, "◀", nav_x_left, nav_y, nav_btn_size, nav_btn_size, left_hover);
+        drawButton(renderer, font, "▶", nav_x_right, nav_y, nav_btn_size, nav_btn_size, right_hover);
 
-    if (left_hover && mouseDown) *pgn_left = 1;
-    if (right_hover && mouseDown) *pgn_right = 1;
+        if (left_hover && mouseDown) *pgn_left = 1;
+        if (right_hover && mouseDown) *pgn_right = 1;
 
-    // Draw PGN moves text with scrolling
-    SDL_Color pgn_color = {0, 0, 80};
-    SDL_Surface* pgn_surface = TTF_RenderUTF8_Blended_Wrapped(font, pgn_moves, pgn_color, PANEL_WIDTH - 60);
-    SDL_Texture* pgn_texture = SDL_CreateTextureFromSurface(renderer, pgn_surface);
-    int pgn_tw, pgn_th;
-    SDL_QueryTexture(pgn_texture, NULL, NULL, &pgn_tw, &pgn_th);
+        // Draw PGN moves text with scrolling
+ SDL_Color pgn_color = {0, 0, 80};
+        SDL_Surface* pgn_surface = TTF_RenderUTF8_Blended_Wrapped(font, pgn_moves, pgn_color, btn_w - 20);
+        SDL_Texture* pgn_texture = SDL_CreateTextureFromSurface(renderer, pgn_surface);
+        int pgn_tw = pgn_surface->w, pgn_th = pgn_surface->h;
 
-    int pgn_area_height = 500;
-    if (pgn_th > pgn_area_height && pgn_scroll > pgn_th - pgn_area_height)
-        pgn_scroll = pgn_th - pgn_area_height;
-    if (pgn_th <= pgn_area_height)
-        pgn_scroll = 0;
+        int pgn_area_height = 500;
+        int effective_scroll = 0;
+        if (pgn_th > pgn_area_height) {
+            if (pgn_scroll > pgn_th - pgn_area_height)
+                pgn_scroll = pgn_th - pgn_area_height;
+            if (pgn_scroll < 0)
+                pgn_scroll = 0;
+            effective_scroll = pgn_scroll;
+        }
 
-    SDL_Rect pgn_src = {0, pgn_scroll, pgn_tw, pgn_area_height};
-    SDL_Rect pgn_dst = {BOARD_WIDTH + 30, nav_y + nav_btn_size + 20, pgn_tw, pgn_area_height};
-    SDL_RenderSetClipRect(renderer, &pgn_area);
-    SDL_RenderCopy(renderer, pgn_texture, &pgn_src, &pgn_dst);
-    SDL_RenderSetClipRect(renderer, NULL);
-    SDL_FreeSurface(pgn_surface);
-    SDL_DestroyTexture(pgn_texture);
+        SDL_Rect pgn_src = {0, effective_scroll, btn_w - 20, pgn_area_height};
+        SDL_Rect pgn_dst = {BOARD_WIDTH + 30, nav_y + nav_btn_size + 20, btn_w - 20, pgn_area_height};
+        SDL_RenderSetClipRect(renderer, &pgn_area);
+        // Only draw as much as the text actually is tall
+        if (pgn_th < pgn_area_height) {
+            pgn_src.h = pgn_th;
+            pgn_dst.h = pgn_th;
+        }
+        SDL_RenderCopy(renderer, pgn_texture, &pgn_src, &pgn_dst);
+        SDL_RenderSetClipRect(renderer, NULL);
+        SDL_FreeSurface(pgn_surface);
+        SDL_DestroyTexture(pgn_texture);
+    }
 }
 
 // --- Graphical menu ---
@@ -284,8 +295,8 @@ void show_menu_and_start_game() {
         SDL_RenderClear(renderer);
 
         if (menu_stage == 0) {
-            const char* labels[4] = {"Om vs AI", "Om vs Om", "AI vs AI", "Ieșire"};
-            for (int i = 0; i < 4; i++) {
+            const char* labels[3] = {"Om vs AI", "Om vs Om"/*, "AI vs AI"*/, "Ieșire"};
+            for (int i = 0; i < 3; i++) {
                 int bx = (MENU_WIDTH-BUTTON_WIDTH)/2;
                 int by = 50 + i*(BUTTON_HEIGHT+BUTTON_MARGIN);
                 int hovered = (mx != -1 && my != -1 && mouseInRect(mx, my, bx, by, BUTTON_WIDTH, BUTTON_HEIGHT));
@@ -386,7 +397,7 @@ void visual(int mode, int color) {
         // --- AI MOVE LOGIC ---
         if (!gameover && (
             (mode == 1 && gs.currentPlayer == gs.culoare_ai) // Human vs AI, AI's turn
-            || (mode == 3) // AI vs AI, always AI's turn
+            /*|| (mode == 3)*/ // AI vs AI, always AI's turn
         ) && pgn_nav_index == -1) { // Only allow AI to move if not in PGN replay
             SDL_Delay(300);
             Move nimic = { .x1 = -1, .y1 = -1, .x2 = -1, .y2 = -1, .scor = 0.0 };
